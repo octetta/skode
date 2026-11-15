@@ -31,5 +31,11 @@ jobs:
       - name: Verify formatting
         run: gleam format --check src test
 
-      - name: Run test suite
-        run: gleam test
+      - name: Run test suite (Erlang BEAM)
+        run: gleam test --target erlang
+
+      - name: Run test suite (JavaScript)
+        run: gleam test --target javascript
+
+      - name: Verify Hex docs generation
+        run: gleam docs build

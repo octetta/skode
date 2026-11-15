@@ -3,7 +3,6 @@ version = "0.1.0"
 description = "Typed AST, parser, and canonical printer for the Skode music sequencer and Skred audio engine"
 licences = ["MIT"]
 repository = { type = "github", user = "octetta", repo = "skode" }
-target = "javascript"
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"

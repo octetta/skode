@@ -1,4 +1,3 @@
-import gleam/io
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
@@ -9,16 +8,8 @@ import skode.{
 
 fn check(name: String, got: a, want: a) -> Bool {
   case got == want {
-    True -> {
-      io.println("ok    " <> name)
-      True
-    }
-    False -> {
-      io.println("FAIL  " <> name)
-      io.println("  got  " <> string.inspect(got))
-      io.println("  want " <> string.inspect(want))
-      False
-    }
+    True -> True
+    False -> panic as { "Check failed: " <> name }
   }
 }
 

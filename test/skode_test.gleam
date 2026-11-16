@@ -361,6 +361,41 @@ pub fn main() {
       ["v0 k1250"],
     ),
     check("generated delay bus default id", { delay_gen.default(2) }.id, 2),
+    check(
+      "generated to_skode default voice",
+      voice_gen.to_skode(voice_gen.default(0)),
+      "v0 w0 f440 a-6",
+    ),
+    check(
+      "generated to_skode with modified filter and wave",
+      {
+        let v =
+          voice_gen.Voice(
+            ..voice_gen.default(1),
+            wave_table_index: 2,
+            filter_freq: 1200.0,
+          )
+        voice_gen.to_skode(v)
+      },
+      "v1 w2 f440 a-6 k1200",
+    ),
+    check(
+      "generated to_skode roundtrips with skode ops parser",
+      {
+        let v =
+          voice_gen.Voice(
+            ..voice_gen.default(0),
+            wave_table_index: 5,
+            freq: 880.0,
+          )
+        let s = voice_gen.to_skode(v)
+        let parsed = ops(s)
+        list.contains(parsed, skode.Voice(0))
+        && list.contains(parsed, skode.Wave(5))
+        && list.contains(parsed, skode.Freq(880.0))
+      },
+      True,
+    ),
   ]
   let failed = list.filter(results, fn(r) { !r }) |> list.length
   case failed {

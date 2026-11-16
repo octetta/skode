@@ -153,6 +153,43 @@ Gleam's algebraic data types map to straightforward Erlang tagged tuples:
 
 ---
 
+## Engine State Domain Models
+
+In addition to the raw wire-protocol parser and AST, `skode` provides structured, typed domain models for managing synthesizer state in UI editors (like [Lustre](https://github.com/hayleigh-dot-dev/lustre)) and distributed BEAM processes:
+
+* **`skode/voice`**: Normalized `Voice` document model (Oscillator, Envelope, Filter, Mix, Modulation, Links), default patches (`voice.default(0)`), full serialization (`to_skode`), and reactive delta diffing (`diff_skode`) for real-time slider updates.
+* **`skode/global`**: Global engine settings including **Master Volume (`V`)** in dB with linear conversion, master tempo and clock (`M`), downbeat reference pattern (`yp`), and the 4 delay lines.
+* **`skode/delay`**: Pulp's 4 stereo delay lines (`DL`, `DD`, `DF`, `DP`, `DG`, `DS`), millisecond timing calculations, and feedback gain curves.
+* **`skode/pattern`**: Sequencer patterns (`y`), clock divider modulo (`%`), step programming (`[code] x<step>`), and playback states (`z`).
+* **`skode/param`**: Physical unit bounds checking, clamping, frequency/note math (`midi_to_hz`), and decibel conversions (`db_to_linear`).
+
+### Example: Reactive Voice & Master Volume Diffs (for Lustre / LiveView)
+
+```gleam
+import skode/global
+import skode/voice
+
+pub fn demo() {
+  // 1. Create default voice 0
+  let v0 = voice.default(0)
+
+  // 2. Tweak cutoff in UI (e.g. slider moves to 1250 Hz)
+  let v1 = voice.Voice(..v0, filter: voice.Filter(..v0.filter, cutoff_hz: 1250.0))
+
+  // 3. Compute surgical delta command to stream to engine
+  voice.diff_skode(v0, v1)
+  // => ["v0 k1250"]
+
+  // 4. Adjust Master Volume (V)
+  let g0 = global.default()
+  let g1 = global.set_master_volume_db(g0, -3.5)
+  global.diff_skode(g0, g1)
+  // => ["V -3.5"]
+}
+```
+
+---
+
 ## Publishing to Hex.pm
 
 To publish a release to Hex.pm:

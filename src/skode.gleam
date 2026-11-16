@@ -68,6 +68,7 @@ pub type Command {
 pub type Op {
   Voice(Int)
   Note(midi: Int, cents: Option(Float))
+  MasterVolume(db: Float)
   Freq(Float)
   Amp(db: Float)
   Level(Float)
@@ -660,6 +661,7 @@ fn interpret(cmd: Command) -> Op {
 fn typed(cmd: Command, fs: List(Float)) -> Op {
   case cmd.atom, fs, cmd.string, cmd.array {
     "v", [a], None, None -> with_int(cmd, a, Voice)
+    "V", [a], None, None -> MasterVolume(a)
     "n", [a], None, None -> with_int(cmd, a, fn(m) { Note(m, None) })
     "n", [a, c], None, None -> with_int(cmd, a, fn(m) { Note(m, Some(c)) })
     "f", [a], None, None -> Freq(a)
@@ -785,6 +787,7 @@ pub fn op_to_string(op: Op) -> String {
 fn op_text(op: Op, first: Bool) -> String {
   case op {
     Voice(n) -> "v" <> i(n)
+    MasterVolume(x) -> "V" <> fmt(x)
     Note(m, None) -> "n" <> i(m)
     Note(m, Some(c)) -> "n" <> i(m) <> "," <> fmt(c)
     Freq(x) -> "f" <> fmt(x)

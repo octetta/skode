@@ -2,9 +2,14 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
 import skode.{
-  type Op, Beats, Chunk, Command, Defer, Generic, Lit, MacroDef, Note, Rest,
-  Seconds, Tie, Value,
+  type Op, Beats, Chunk, Command, Defer, Generic, Lit, MacroDef, MasterVolume,
+  Note, Rest, Seconds, Tie, Value,
 }
+import skode/delay
+import skode/global
+import skode/param
+import skode/pattern
+import skode/voice
 
 fn check(name: String, got: a, want: a) -> Bool {
   case got == want {
@@ -245,6 +250,52 @@ pub fn main() {
     roundtrip("envelope 2-arg and flat", "t0.01,0.05 t"),
     roundtrip("links G, H, HS", "G ( 1 2 ) H ( 3 ) HS ( 0 1 2 )"),
     roundtrip("clock", "M 125 96\nA5,0.025,0.975 /cex 0,4,0 ce 127"),
+    // master volume (V)
+    check("master volume op", ops("V-6"), [MasterVolume(-6.0)]),
+    check("master volume 0 dB", ops("V 0"), [MasterVolume(0.0)]),
+    roundtrip("master volume roundtrip", "V-6"),
+    // param module
+    check("clamp freq low", param.clamp_frequency(5.0), 20.0),
+    check("clamp freq high", param.clamp_frequency(25000.0), 20000.0),
+    check("midi to hz A4", param.midi_to_hz(69.0, 0.0), 440.0),
+    check("db to linear 0dB", param.db_to_linear(0.0), 1.0),
+    check("db to linear -60dB", param.db_to_linear(-60.0), 0.0),
+    check(
+      "filter mode roundtrip",
+      param.filter_mode_from_int(param.filter_mode_to_int(param.LowPass)),
+      param.LowPass,
+    ),
+    // voice module
+    check("voice default id", { voice.default(3) }.id, 3),
+    check("voice to skode starts with v0", string.starts_with(voice.to_skode(voice.default(0)), "v0"), True),
+    check("voice diff empty when identical", voice.diff_skode(voice.default(0), voice.default(0)), []),
+    check("voice diff on cutoff change", {
+      let v0 = voice.default(0)
+      let v1 = voice.Voice(..v0, filter: voice.Filter(..v0.filter, cutoff_hz: 1250.0))
+      voice.diff_skode(v0, v1)
+    }, ["v0 k1250"]),
+    // delay module
+    check("delay default id", { delay.default(1) }.id, 1),
+    check("delay ms calculation", delay.delay_time_ms(0, 15) >. 7.0, True),
+    check("delay feedback gain", delay.feedback_gain(15) <=. 0.82, True),
+    check("delay diff on freeze", {
+      let d0 = delay.default(1)
+      let d1 = delay.DelayBus(..d0, freeze: True)
+      delay.diff_skode(d0, d1)
+    }, ["DF 1 1"]),
+    // global module (master volume, tempo, clock)
+    check("global default master volume", { global.default() }.master_volume_db, -6.0),
+    check("global diff on volume change", {
+      let g0 = global.default()
+      let g1 = global.set_master_volume_db(g0, -3.5)
+      global.diff_skode(g0, g1)
+    }, ["V -3.5"]),
+    // pattern module
+    check("pattern default id", { pattern.default(2) }.id, 2),
+    check("pattern set step and serialize", {
+      let p = pattern.default(0) |> pattern.set_step(0, "v0 n60 l1")
+      string.contains(pattern.to_skode(p), "[v0 n60 l1] x0")
+    }, True),
   ]
   let failed = list.filter(results, fn(r) { !r }) |> list.length
   case failed {

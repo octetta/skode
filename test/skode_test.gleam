@@ -6,6 +6,10 @@ import skode.{
   Note, Rest, Seconds, Tie, Value,
 }
 import skode/delay
+import skode/gen/delay_gen
+import skode/gen/diff_gen
+import skode/gen/param_gen
+import skode/gen/voice_gen
 import skode/global
 import skode/param
 import skode/pattern
@@ -328,6 +332,35 @@ pub fn main() {
       },
       True,
     ),
+    // mksynth generated modules (voice_gen, delay_gen, param_gen, diff_gen)
+    check("generated voice default id", { voice_gen.default(3) }.id, 3),
+    check(
+      "generated param clamping",
+      param_gen.clamp_freq(5.0) == 20.0
+        && param_gen.clamp_freq(30_000.0) == 20_000.0
+        && param_gen.clamp_wave_table_index(2000) == 1299
+        && param_gen.clamp_record(99) == 4,
+      True,
+    ),
+    check(
+      "generated diff voice freq",
+      {
+        let v0 = voice_gen.default(0)
+        let v1 = voice_gen.Voice(..v0, freq: 880.0)
+        diff_gen.diff_voice_skode(v0, v1)
+      },
+      ["v0 f880"],
+    ),
+    check(
+      "generated diff voice filter freq",
+      {
+        let v0 = voice_gen.default(0)
+        let v1 = voice_gen.Voice(..v0, filter_freq: 1250.0)
+        diff_gen.diff_voice_skode(v0, v1)
+      },
+      ["v0 k1250"],
+    ),
+    check("generated delay bus default id", { delay_gen.default(2) }.id, 2),
   ]
   let failed = list.filter(results, fn(r) { !r }) |> list.length
   case failed {

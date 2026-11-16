@@ -49,11 +49,7 @@ pub type Oscillator {
 }
 
 pub type Envelope {
-  Envelope(
-    adsr: Adsr,
-    mode: Int,
-    velocity: Float,
-  )
+  Envelope(adsr: Adsr, mode: Int, velocity: Float)
 }
 
 pub type Filter {
@@ -88,11 +84,7 @@ pub type Modulation {
 }
 
 pub type VoiceLinks {
-  VoiceLinks(
-    gate: List(Int),
-    sync: List(Int),
-    velocity: List(Int),
-  )
+  VoiceLinks(gate: List(Int), sync: List(Int), velocity: List(Int))
 }
 
 pub type Voice {
@@ -113,8 +105,10 @@ pub fn default(voice_id: Int) -> Voice {
   Voice(
     id: v,
     oscillator: Oscillator(
-      wave: 0, // Sine wave
-      pitch: Note(midi: 60.0, cents: 0.0), // Middle C (C4)
+      wave: 0,
+      // Sine wave
+      pitch: Note(midi: 60.0, cents: 0.0),
+      // Middle C (C4)
       detune_cents: 0.0,
       interpolate: True,
       one_shot: False,
@@ -125,11 +119,7 @@ pub fn default(voice_id: Int) -> Voice {
       sample_window: None,
       wave_loop: None,
     ),
-    envelope: Envelope(
-      adsr: param.default_adsr(),
-      mode: 0,
-      velocity: 1.0,
-    ),
+    envelope: Envelope(adsr: param.default_adsr(), mode: 0, velocity: 1.0),
     filter: Filter(
       mode: LowPass,
       character: 0,
@@ -152,11 +142,7 @@ pub fn default(voice_id: Int) -> Voice {
       freq_feedback: 0.0,
       sample_hold: None,
     ),
-    links: VoiceLinks(
-      gate: [],
-      sync: [],
-      velocity: [],
-    ),
+    links: VoiceLinks(gate: [], sync: [], velocity: []),
   )
 }
 
@@ -167,10 +153,11 @@ pub fn to_skode(voice: Voice) -> String {
     "w" <> int.to_string(voice.oscillator.wave),
     case voice.oscillator.pitch {
       Freq(hz) -> "f" <> param.format_float(hz)
-      Note(m, c) -> case c == 0.0 {
-        True -> "n" <> param.format_float(m)
-        False -> "n" <> param.format_float(m) <> "," <> param.format_float(c)
-      }
+      Note(m, c) ->
+        case c == 0.0 {
+          True -> "n" <> param.format_float(m)
+          False -> "n" <> param.format_float(m) <> "," <> param.format_float(c)
+        }
     },
     case voice.oscillator.detune_cents == 0.0 {
       True -> ""
@@ -202,8 +189,8 @@ pub fn to_skode(voice: Voice) -> String {
     FilterOff -> ["j0"]
     _ -> [
       "j"
-      <> int.to_string(param.filter_mode_to_int(voice.filter.mode))
-      <> case voice.filter.character > 0 {
+        <> int.to_string(param.filter_mode_to_int(voice.filter.mode))
+        <> case voice.filter.character > 0 {
         True -> " " <> int.to_string(voice.filter.character)
         False -> ""
       },
@@ -251,10 +238,7 @@ pub fn diff_skode(old: Voice, new: Voice) -> List(String) {
           case c == 0.0 {
             True -> ["n" <> param.format_float(m), ..diffs]
             False -> [
-              "n"
-              <> param.format_float(m)
-              <> ","
-              <> param.format_float(c),
+              "n" <> param.format_float(m) <> "," <> param.format_float(c),
               ..diffs
             ]
           }
@@ -267,7 +251,10 @@ pub fn diff_skode(old: Voice, new: Voice) -> List(String) {
   }
   let diffs = case old.oscillator.loop_enabled != new.oscillator.loop_enabled {
     True -> [
-      case new.oscillator.loop_enabled { True -> "B1" False -> "B0" },
+      case new.oscillator.loop_enabled {
+        True -> "B1"
+        False -> "B0"
+      },
       ..diffs
     ]
     False -> diffs
@@ -277,24 +264,27 @@ pub fn diff_skode(old: Voice, new: Voice) -> List(String) {
   let diffs = case old.envelope.adsr != new.envelope.adsr {
     True -> [
       "t"
-      <> param.format_float(new.envelope.adsr.attack)
-      <> ","
-      <> param.format_float(new.envelope.adsr.decay)
-      <> ","
-      <> param.format_float(new.envelope.adsr.sustain)
-      <> ","
-      <> param.format_float(new.envelope.adsr.release),
+        <> param.format_float(new.envelope.adsr.attack)
+        <> ","
+        <> param.format_float(new.envelope.adsr.decay)
+        <> ","
+        <> param.format_float(new.envelope.adsr.sustain)
+        <> ","
+        <> param.format_float(new.envelope.adsr.release),
       ..diffs
     ]
     False -> diffs
   }
 
   // Filter diffs
-  let diffs = case old.filter.mode != new.filter.mode || old.filter.character != new.filter.character {
+  let diffs = case
+    old.filter.mode != new.filter.mode
+    || old.filter.character != new.filter.character
+  {
     True -> [
       "j"
-      <> int.to_string(param.filter_mode_to_int(new.filter.mode))
-      <> case new.filter.character > 0 {
+        <> int.to_string(param.filter_mode_to_int(new.filter.mode))
+        <> case new.filter.character > 0 {
         True -> " " <> int.to_string(new.filter.character)
         False -> ""
       },
@@ -321,7 +311,13 @@ pub fn diff_skode(old: Voice, new: Voice) -> List(String) {
     False -> diffs
   }
   let diffs = case old.mix.mute != new.mix.mute {
-    True -> [case new.mix.mute { True -> "mu1" False -> "mu0" }, ..diffs]
+    True -> [
+      case new.mix.mute {
+        True -> "mu1"
+        False -> "mu0"
+      },
+      ..diffs
+    ]
     False -> diffs
   }
   let diffs = case old.mix.delay_send != new.mix.delay_send {

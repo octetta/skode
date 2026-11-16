@@ -9,10 +9,7 @@ import gleam/string
 import skode/param
 
 pub type Step {
-  Step(
-    index: Int,
-    code: String,
-  )
+  Step(index: Int, code: String)
 }
 
 pub type PatternState {
@@ -23,13 +20,20 @@ pub type PatternState {
 
 pub type Pattern {
   Pattern(
-    id: Int,                        // 0 .. 127
-    speed: Int,                     // %: clock divider modulo (1 = every tick)
-    length: Int,                    // number of active steps (1 .. 256)
-    mute: Bool,                     // zmu: pattern mute
-    control_events: Bool,           // ce: emit control events
-    state: PatternState,            // z: playback state
-    steps: Dict(Int, String),       // step index -> Skode command body
+    id: Int,
+    // 0 .. 127
+    speed: Int,
+    // %: clock divider modulo (1 = every tick)
+    length: Int,
+    // number of active steps (1 .. 256)
+    mute: Bool,
+    // zmu: pattern mute
+    control_events: Bool,
+    // ce: emit control events
+    state: PatternState,
+    // z: playback state
+    steps: Dict(Int, String),
+    // step index -> Skode command body
   )
 }
 
@@ -98,7 +102,13 @@ pub fn diff_skode(old: Pattern, new: Pattern) -> List(String) {
     False -> diffs
   }
   let diffs = case old.mute != new.mute {
-    True -> [case new.mute { True -> "zmu1" False -> "zmu0" }, ..diffs]
+    True -> [
+      case new.mute {
+        True -> "zmu1"
+        False -> "zmu0"
+      },
+      ..diffs
+    ]
     False -> diffs
   }
   let diffs = case old.state != new.state {

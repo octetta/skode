@@ -21,14 +21,19 @@ pub fn format_float(f: Float) -> String {
 // ---- Frequency & Pitch ----
 
 pub const min_frequency_hz = 20.0
-pub const max_frequency_hz = 20000.0
+
+pub const max_frequency_hz = 20_000.0
+
 pub const default_frequency_hz = 440.0
 
 pub const min_midi_note = 0.0
+
 pub const max_midi_note = 127.0
+
 pub const default_midi_note = 60.0
 
 pub const min_cents = -100.0
+
 pub const max_cents = 100.0
 
 pub type Pitch {
@@ -66,9 +71,13 @@ pub fn midi_to_hz(note: Float, cents: Float) -> Float {
 // ---- Volume, Amplitude & Decibels ----
 
 pub const min_db = -60.0
+
 pub const max_db = 12.0
+
 pub const silent_db = -60.0
+
 pub const default_voice_db = 0.0
+
 pub const default_master_volume_db = -6.0
 
 /// Clamp decibels to engine operating range (-60 dB .. +12 dB).
@@ -111,7 +120,9 @@ pub fn linear_to_db(linear: Float) -> Float {
 // ---- Stereo Pan ----
 
 pub const min_pan = -1.0
+
 pub const max_pan = 1.0
+
 pub const center_pan = 0.0
 
 /// Clamp stereo pan to -1.0 (hard left) .. +1.0 (hard right).
@@ -153,7 +164,9 @@ pub fn filter_mode_from_int(i: Int) -> FilterMode {
 }
 
 pub const min_resonance_q = 0.1
+
 pub const max_resonance_q = 20.0
+
 pub const default_resonance_q = 0.707
 
 /// Clamp filter resonance Q factor (0.1 .. 20.0).
@@ -165,10 +178,14 @@ pub fn clamp_resonance(q: Float) -> Float {
 
 pub type Adsr {
   Adsr(
-    attack: Float,  // seconds >= 0.0
-    decay: Float,   // seconds >= 0.0
-    sustain: Float, // level 0.0 .. 1.0
-    release: Float, // seconds >= 0.0
+    attack: Float,
+    // seconds >= 0.0
+    decay: Float,
+    // seconds >= 0.0
+    sustain: Float,
+    // level 0.0 .. 1.0
+    release: Float,
+    // seconds >= 0.0
   )
 }
 
@@ -188,6 +205,7 @@ pub fn clamp_adsr(adsr: Adsr) -> Adsr {
 // ---- Wavetable & Oscillators ----
 
 pub const min_wave_index = 0
+
 pub const max_wave_index = 999
 
 pub type WaveDirection {
@@ -215,8 +233,11 @@ pub fn wave_direction_from_int(i: Int) -> WaveDirection {
 // ---- Index Limits ----
 
 pub const max_voices = 256
+
 pub const delay_bus_count = 4
+
 pub const max_patterns = 128
+
 pub const max_steps = 256
 
 pub fn clamp_voice_id(id: Int) -> Int {
@@ -238,8 +259,11 @@ pub fn clamp_step_id(id: Int) -> Int {
 // ---- Tempo / Clock ----
 
 pub const min_bpm = 1.0
+
 pub const max_bpm = 960.0
+
 pub const default_bpm = 120.0
+
 pub const default_subdivision = 16.0
 
 pub fn clamp_bpm(bpm: Float) -> Float {

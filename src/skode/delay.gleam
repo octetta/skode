@@ -19,19 +19,32 @@ pub type DelayGrit {
 
 pub type DelayBus {
   DelayBus(
-    id: Int,                        // 1 .. 4
-    coarse: Int,                    // 0 .. 7 (base time bucket: 8ms * 2^coarse)
-    fine: Int,                      // 0 .. 15 (fine multiplier factor 0.5..1.0)
-    feedback: Int,                  // 0 .. 15 (feedback gain 0.0 .. 0.82)
-    mod_freq: Int,                  // 0 .. 31 (LFO modulation rate 0.0 .. 10.0 Hz)
-    mod_depth: Int,                 // 0 .. 31 (LFO modulation depth)
-    level: Int,                     // 0 .. 15 (wet mix output level)
-    damping: Int,                   // 0 .. 15 (lowpass damping)
-    highpass: Int,                  // 0 .. 15 (highpass filter)
-    pingpong: Bool,                 // cross-channel stereo feedback
-    freeze: Bool,                   // infinite repeat toggle
-    grit: DelayGrit,                // bit depth quantizer
-    sync: Option(#(Float, Float)),  // beat sync (bpm, division)
+    id: Int,
+    // 1 .. 4
+    coarse: Int,
+    // 0 .. 7 (base time bucket: 8ms * 2^coarse)
+    fine: Int,
+    // 0 .. 15 (fine multiplier factor 0.5..1.0)
+    feedback: Int,
+    // 0 .. 15 (feedback gain 0.0 .. 0.82)
+    mod_freq: Int,
+    // 0 .. 31 (LFO modulation rate 0.0 .. 10.0 Hz)
+    mod_depth: Int,
+    // 0 .. 31 (LFO modulation depth)
+    level: Int,
+    // 0 .. 15 (wet mix output level)
+    damping: Int,
+    // 0 .. 15 (lowpass damping)
+    highpass: Int,
+    // 0 .. 15 (highpass filter)
+    pingpong: Bool,
+    // cross-channel stereo feedback
+    freeze: Bool,
+    // infinite repeat toggle
+    grit: DelayGrit,
+    // bit depth quantizer
+    sync: Option(#(Float, Float)),
+    // beat sync (bpm, division)
   )
 }
 
@@ -39,12 +52,16 @@ pub type DelayBus {
 pub fn default(bus_id: Int) -> DelayBus {
   DelayBus(
     id: param.clamp_delay_bus_id(bus_id),
-    coarse: 4,     // ~256ms base
-    fine: 15,      // full factor (1.0)
-    feedback: 8,   // ~50% feedback
+    coarse: 4,
+    // ~256ms base
+    fine: 15,
+    // full factor (1.0)
+    feedback: 8,
+    // ~50% feedback
     mod_freq: 0,
     mod_depth: 0,
-    level: 10,     // moderate wet level
+    level: 10,
+    // moderate wet level
     damping: 2,
     highpass: 0,
     pingpong: False,
@@ -71,7 +88,7 @@ pub fn delay_time_ms(coarse: Int, fine: Int) -> Float {
     _ -> 128.0
   }
   let base_ms = 8.0 *. shift_factor
-  let fine_factor = 0.5 +. {{ int.to_float(f) /. 15.0 } *. 0.5 }
+  let fine_factor = 0.5 +. { { int.to_float(f) /. 15.0 } *. 0.5 }
   base_ms *. fine_factor
 }
 
@@ -114,8 +131,22 @@ pub fn to_skode(bus: DelayBus) -> String {
     <> int.to_string(bus.damping)
     <> " "
     <> int.to_string(bus.highpass)
-  let df = "DF " <> b <> " " <> case bus.freeze { True -> "1" False -> "0" }
-  let dp = "DP " <> b <> " " <> case bus.pingpong { True -> "1" False -> "0" }
+  let df =
+    "DF "
+    <> b
+    <> " "
+    <> case bus.freeze {
+      True -> "1"
+      False -> "0"
+    }
+  let dp =
+    "DP "
+    <> b
+    <> " "
+    <> case bus.pingpong {
+      True -> "1"
+      False -> "0"
+    }
   let dg = case bus.grit {
     NativeFloat -> "DG " <> b <> " 0 1"
     Quantized(bits) -> "DG " <> b <> " " <> int.to_string(bits) <> " 0"
@@ -161,7 +192,9 @@ pub fn diff_skode(old: DelayBus, new: DelayBus) -> List(String) {
     False -> []
   }
 
-  let dd_diff = case old.damping != new.damping || old.highpass != new.highpass {
+  let dd_diff = case
+    old.damping != new.damping || old.highpass != new.highpass
+  {
     True -> [
       "DD "
       <> b
@@ -178,7 +211,10 @@ pub fn diff_skode(old: DelayBus, new: DelayBus) -> List(String) {
       "DF "
       <> b
       <> " "
-      <> case new.freeze { True -> "1" False -> "0" },
+      <> case new.freeze {
+        True -> "1"
+        False -> "0"
+      },
     ]
     False -> []
   }
@@ -188,7 +224,10 @@ pub fn diff_skode(old: DelayBus, new: DelayBus) -> List(String) {
       "DP "
       <> b
       <> " "
-      <> case new.pingpong { True -> "1" False -> "0" },
+      <> case new.pingpong {
+        True -> "1"
+        False -> "0"
+      },
     ]
     False -> []
   }
@@ -207,7 +246,12 @@ pub fn diff_skode(old: DelayBus, new: DelayBus) -> List(String) {
     True ->
       case new.sync {
         Some(#(bpm, div)) -> [
-          "DS " <> b <> " " <> float.to_string(bpm) <> " " <> float.to_string(div),
+          "DS "
+          <> b
+          <> " "
+          <> float.to_string(bpm)
+          <> " "
+          <> float.to_string(div),
         ]
         None -> []
       }

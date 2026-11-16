@@ -47,18 +47,28 @@ pub fn master_volume_linear(settings: EngineSettings) -> Float {
 }
 
 /// Set master volume in dB with clamping.
-pub fn set_master_volume_db(settings: EngineSettings, db: Float) -> EngineSettings {
+pub fn set_master_volume_db(
+  settings: EngineSettings,
+  db: Float,
+) -> EngineSettings {
   EngineSettings(..settings, master_volume_db: param.clamp_db(db))
 }
 
 /// Set master volume as a linear multiplier (0.0 .. 1.0+), converted to dB.
-pub fn set_master_volume_linear(settings: EngineSettings, linear: Float) -> EngineSettings {
+pub fn set_master_volume_linear(
+  settings: EngineSettings,
+  linear: Float,
+) -> EngineSettings {
   let db = param.linear_to_db(linear)
   EngineSettings(..settings, master_volume_db: db)
 }
 
 /// Set master tempo with clamping.
-pub fn set_tempo(settings: EngineSettings, bpm: Float, subdivision: Float) -> EngineSettings {
+pub fn set_tempo(
+  settings: EngineSettings,
+  bpm: Float,
+  subdivision: Float,
+) -> EngineSettings {
   EngineSettings(
     ..settings,
     tempo_bpm: param.clamp_bpm(bpm),
@@ -107,16 +117,17 @@ pub fn diff_skode(old: EngineSettings, new: EngineSettings) -> List(String) {
     False -> []
   }
 
-  let tempo_diff =
-    case old.tempo_bpm != new.tempo_bpm || old.subdivision != new.subdivision {
-      True -> [
-        "M "
-        <> param.format_float(new.tempo_bpm)
-        <> " "
-        <> param.format_float(new.subdivision),
-      ]
-      False -> []
-    }
+  let tempo_diff = case
+    old.tempo_bpm != new.tempo_bpm || old.subdivision != new.subdivision
+  {
+    True -> [
+      "M "
+      <> param.format_float(new.tempo_bpm)
+      <> " "
+      <> param.format_float(new.subdivision),
+    ]
+    False -> []
+  }
 
   let mp_diff = case old.master_pattern != new.master_pattern {
     True ->

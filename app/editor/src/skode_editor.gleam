@@ -7,18 +7,19 @@ import gleam/float
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/string
 import lustre
-import lustre/attribute.{max, min, step, styles, type_, value}
+import lustre/attribute.{max, min, placeholder, step, styles, type_, value}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element, text}
 import lustre/element/html.{
-  button, div, footer, h1, header, input, label, nav, option, p, pre, select,
-  span,
+  button, div, footer, form, h1, header, input, label, nav, option, p, pre,
+  select, span,
 }
-import lustre/event.{on_click, on_input}
+import lustre/event.{on_click, on_input, on_submit}
 import skode/gen/diff_gen
 import skode/gen/param_gen
-import skode/gen/voice_gen.{type Voice}
+import skode/gen/voice_gen.{type Voice, Voice}
 
 // -----------------------------------------------------------------------------
 // FFI Declarations
@@ -64,6 +65,7 @@ pub type Model {
     auto_dispatch: Bool,
     notification: Option(String),
     history: List(String),
+    input_command: String,
   )
 }
 
@@ -98,6 +100,8 @@ pub type Msg {
   ResetCurrentVoice
   TriggerVoice
   CopySkodeText
+  SetInputCommand(String)
+  SubmitInputCommand
   SetNotification(String)
   DismissNotification
 }
@@ -116,6 +120,7 @@ pub fn init(_flags) -> #(Model, Effect(Msg)) {
       auto_dispatch: True,
       notification: None,
       history: ["v0 w0 f440 a-6"],
+      input_command: "",
     )
   #(model, effect.none())
 }
@@ -382,6 +387,31 @@ pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       #(model, copy_effect(cmd))
     }
 
+    SetInputCommand(text) -> {
+      #(Model(..model, input_command: text), effect.none())
+    }
+
+    SubmitInputCommand -> {
+      let raw = string.trim(model.input_command)
+      case raw {
+        "" -> #(model, effect.none())
+        cmd -> {
+          let updated_voice = apply_skode_string_to_voice(model.voice, cmd)
+          let new_history = [cmd, ..list.take(model.history, 19)]
+          let next_model =
+            Model(
+              ..model,
+              voice: updated_voice,
+              last_dispatched: updated_voice,
+              input_command: "",
+              notification: Some("Executed: " <> cmd),
+              history: new_history,
+            )
+          #(next_model, dispatch_skode_effect(cmd))
+        }
+      }
+    }
+
     SetNotification(msg_text) -> {
       #(Model(..model, notification: Some(msg_text)), effect.none())
     }
@@ -390,6 +420,252 @@ pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       #(Model(..model, notification: None), effect.none())
     }
   }
+}
+
+// -----------------------------------------------------------------------------
+// Live Command Parsing
+// -----------------------------------------------------------------------------
+
+fn is_digit(ch: String) -> Bool {
+  case ch {
+    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" -> True
+    _ -> False
+  }
+}
+
+fn is_alpha(ch: String) -> Bool {
+  case ch {
+    "a"
+    | "b"
+    | "c"
+    | "d"
+    | "e"
+    | "f"
+    | "g"
+    | "h"
+    | "i"
+    | "j"
+    | "k"
+    | "l"
+    | "m"
+    | "n"
+    | "o"
+    | "p"
+    | "q"
+    | "r"
+    | "s"
+    | "t"
+    | "u"
+    | "v"
+    | "w"
+    | "x"
+    | "y"
+    | "z"
+    | "A"
+    | "B"
+    | "C"
+    | "D"
+    | "E"
+    | "F"
+    | "G"
+    | "H"
+    | "I"
+    | "J"
+    | "K"
+    | "L"
+    | "M"
+    | "N"
+    | "O"
+    | "P"
+    | "Q"
+    | "R"
+    | "S"
+    | "T"
+    | "U"
+    | "V"
+    | "W"
+    | "X"
+    | "Y"
+    | "Z"
+    | "_" -> True
+    _ -> False
+  }
+}
+
+fn strip_voice_prefix(token: String) -> String {
+  case string.pop_grapheme(token) {
+    Ok(#(ch, rest)) -> {
+      case is_digit(ch) {
+        True -> strip_voice_prefix(rest)
+        False -> token
+      }
+    }
+    Error(_) -> token
+  }
+}
+
+fn split_op_val(token: String) -> #(String, String) {
+  split_op_val_acc(token, "")
+}
+
+fn split_op_val_acc(token: String, acc: String) -> #(String, String) {
+  case string.pop_grapheme(token) {
+    Ok(#(ch, rest)) -> {
+      case is_alpha(ch) {
+        True -> split_op_val_acc(rest, acc <> ch)
+        False -> #(acc, token)
+      }
+    }
+    Error(_) -> #(acc, "")
+  }
+}
+
+fn apply_single_token(voice: Voice, token: String) -> Voice {
+  let cleaned = strip_voice_prefix(token)
+  let #(op, val_str) = split_op_val(cleaned)
+  case string.lowercase(op) {
+    "v" -> Voice(..voice, id: parse_int(val_str, voice.id))
+    "w" | "wave" ->
+      Voice(
+        ..voice,
+        wave_table_index: param_gen.clamp_wave_table_index(parse_int(
+          val_str,
+          voice.wave_table_index,
+        )),
+      )
+    "k" | "cutoff" ->
+      Voice(
+        ..voice,
+        filter_freq: param_gen.clamp_filter_freq(parse_float(
+          val_str,
+          voice.filter_freq,
+        )),
+      )
+    "q" | "res" | "resonance" ->
+      Voice(
+        ..voice,
+        filter_res: param_gen.clamp_filter_res(parse_float(
+          val_str,
+          voice.filter_res,
+        )),
+      )
+    "fm" | "filtermode" ->
+      Voice(
+        ..voice,
+        filter_mode: param_gen.clamp_filter_mode(parse_int(
+          val_str,
+          voice.filter_mode,
+        )),
+      )
+    "fed" | "fenv" ->
+      Voice(
+        ..voice,
+        filter_env_depth: param_gen.clamp_filter_env_depth(parse_float(
+          val_str,
+          voice.filter_env_depth,
+        )),
+      )
+    "n" | "note" ->
+      Voice(
+        ..voice,
+        midi_note: param_gen.clamp_midi_note(parse_float(
+          val_str,
+          voice.midi_note,
+        )),
+        pitch_mode: 1,
+      )
+    "f" | "freq" ->
+      Voice(
+        ..voice,
+        freq: param_gen.clamp_freq(parse_float(val_str, voice.freq)),
+        pitch_mode: 0,
+      )
+    "amp" | "vol" ->
+      Voice(..voice, amp: param_gen.clamp_amp(parse_float(val_str, voice.amp)))
+    "pan" ->
+      Voice(..voice, pan: param_gen.clamp_pan(parse_float(val_str, voice.pan)))
+    "del" | "delay" ->
+      Voice(
+        ..voice,
+        delay_send: param_gen.clamp_delay_send(parse_float(
+          val_str,
+          voice.delay_send,
+        )),
+      )
+    "cz" ->
+      Voice(
+        ..voice,
+        cz_mode: param_gen.clamp_cz_mode(parse_int(val_str, voice.cz_mode)),
+      )
+    "czd" ->
+      Voice(
+        ..voice,
+        cz_distortion: param_gen.clamp_cz_distortion(parse_float(
+          val_str,
+          voice.cz_distortion,
+        )),
+      )
+    "ring" ->
+      Voice(
+        ..voice,
+        ring_amount: param_gen.clamp_ring_amount(parse_float(
+          val_str,
+          voice.ring_amount,
+        )),
+      )
+    "sh" ->
+      Voice(
+        ..voice,
+        sample_hold_ratio: param_gen.clamp_sample_hold_ratio(parse_float(
+          val_str,
+          voice.sample_hold_ratio,
+        )),
+      )
+    "qnt" ->
+      Voice(
+        ..voice,
+        quantize: param_gen.clamp_quantize(parse_int(val_str, voice.quantize)),
+      )
+    "gt" ->
+      Voice(
+        ..voice,
+        glissando_time: param_gen.clamp_glissando_time(parse_float(
+          val_str,
+          voice.glissando_time,
+        )),
+      )
+    "sm" ->
+      Voice(
+        ..voice,
+        smoother_smoothing: param_gen.clamp_smoother_smoothing(parse_float(
+          val_str,
+          voice.smoother_smoothing,
+        )),
+      )
+    "abp" ->
+      Voice(
+        ..voice,
+        amp_bend_range: param_gen.clamp_amp_bend_range(parse_float(
+          val_str,
+          voice.amp_bend_range,
+        )),
+      )
+    "pbp" ->
+      Voice(
+        ..voice,
+        freq_bend_range: param_gen.clamp_freq_bend_range(parse_float(
+          val_str,
+          voice.freq_bend_range,
+        )),
+      )
+    "reset" -> voice_gen.default(voice.id)
+    _ -> voice
+  }
+}
+
+fn apply_skode_string_to_voice(voice: Voice, text: String) -> Voice {
+  let tokens = string.split(string.trim(text), " ")
+  list.fold(tokens, voice, apply_single_token)
 }
 
 // -----------------------------------------------------------------------------
@@ -662,6 +938,107 @@ pub fn view(model: Model) -> Element(Msg) {
               ]),
             ],
             [text("📋 Copy")],
+          ),
+        ],
+      ),
+      // Optional Notification Banner
+      case model.notification {
+        Some(msg_text) ->
+          div(
+            [
+              styles([
+                #("background", "#1f6feb22"),
+                #("border", "1px solid #1f6feb88"),
+                #("border-radius", "6px"),
+                #("padding", "10px 14px"),
+                #("margin-bottom", "16px"),
+                #("display", "flex"),
+                #("justify-content", "space-between"),
+                #("align-items", "center"),
+                #("color", "#58a6ff"),
+                #("font-size", "13px"),
+              ]),
+            ],
+            [
+              span([], [text("ℹ " <> msg_text)]),
+              button(
+                [
+                  on_click(DismissNotification),
+                  styles([
+                    #("background", "transparent"),
+                    #("border", "none"),
+                    #("color", "#8b949e"),
+                    #("cursor", "pointer"),
+                    #("font-size", "16px"),
+                  ]),
+                ],
+                [text("✕")],
+              ),
+            ],
+          )
+        None -> element.none()
+      },
+      // Live Skode Command Input Bar
+      form(
+        [
+          on_submit(fn(_) { SubmitInputCommand }),
+          styles([
+            #("display", "flex"),
+            #("gap", "10px"),
+            #("margin-bottom", "20px"),
+            #("background", "#161b22"),
+            #("border", "1px solid #30363d"),
+            #("border-radius", "8px"),
+            #("padding", "8px 14px"),
+            #("align-items", "center"),
+          ]),
+        ],
+        [
+          span(
+            [
+              styles([
+                #("color", "#58a6ff"),
+                #("font-family", "monospace"),
+                #("font-size", "14px"),
+                #("font-weight", "bold"),
+              ]),
+            ],
+            [text("skode>")],
+          ),
+          input([
+            type_("text"),
+            value(model.input_command),
+            placeholder(
+              "Live Skode input: e.g. 0k1500 0q8.5 0w1 0n60 0T (Press Enter)",
+            ),
+            on_input(SetInputCommand),
+            styles([
+              #("flex", "1"),
+              #("background", "#0d1117"),
+              #("border", "1px solid #30363d"),
+              #("border-radius", "6px"),
+              #("padding", "8px 12px"),
+              #("color", "#7ee787"),
+              #("font-family", "monospace"),
+              #("font-size", "14px"),
+              #("outline", "none"),
+            ]),
+          ]),
+          button(
+            [
+              type_("submit"),
+              styles([
+                #("padding", "8px 16px"),
+                #("background", "#238636"),
+                #("color", "#ffffff"),
+                #("border", "none"),
+                #("border-radius", "6px"),
+                #("font-weight", "600"),
+                #("cursor", "pointer"),
+                #("font-size", "13px"),
+              ]),
+            ],
+            [text("Send ↵")],
           ),
         ],
       ),

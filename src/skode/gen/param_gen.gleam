@@ -419,6 +419,14 @@ pub fn clamp_freq_bend_range(val: Float) -> Float {
   float.clamp(val, min_freq_bend_range, max_freq_bend_range)
 }
 
+pub const min_amp_bend_range = 0.0
+
+pub const max_amp_bend_range = 48.0
+
+pub fn clamp_amp_bend_range(val: Float) -> Float {
+  float.clamp(val, min_amp_bend_range, max_amp_bend_range)
+}
+
 pub const min_coarse = 0
 
 pub const max_coarse = 7

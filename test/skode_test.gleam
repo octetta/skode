@@ -40,7 +40,7 @@ pub fn main() {
   let results = [
     // package and aligned engine versions
     check("skode package version", skode.version, "0.1.0"),
-    check("aligned pulp version", skode.pulp_version, "0.84.0"),
+    check("aligned pulp version", skode.pulp_version, "0.85.0"),
     // tokenizing
     check("tight packing", ops("v0w1f440"), [
       skode.Voice(0),

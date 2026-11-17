@@ -24,6 +24,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
+import skode/gen/version_gen
 
 // ---- Versions ----
 
@@ -31,7 +32,7 @@ import gleam/string
 pub const version = "0.1.0"
 
 /// Upstream Pulp / Skred audio engine release version this AST aligns with.
-pub const pulp_version = "0.84.0"
+pub const pulp_version = version_gen.pulp_version
 
 // ---- Types ----
 

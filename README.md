@@ -2,7 +2,7 @@
 
 [![Hex Package](https://img.shields.io/hexpm/v/skode.svg)](https://hex.pm/packages/skode)
 [![HexDocs](https://img.shields.io/badge/hex-docs-purple.svg)](https://hexdocs.pm/skode/)
-[![Engine Alignment](https://img.shields.io/badge/skred-v0.84.0-ff69b4.svg)](https://github.com/octetta/pulp)
+[![Engine Alignment](https://img.shields.io/badge/skred-v0.85.0-ff69b4.svg)](https://github.com/octetta/pulp)
 [![BEAM](https://img.shields.io/badge/BEAM-Erlang%20%7C%20Elixir%20%7C%20Gleam%20%7C%20LFE%20%7C%20erlua-a30535.svg)](https://erlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -89,7 +89,7 @@ iodata = :skode.program_to_string(chunks)
 
 # Check versions
 "0.1.0"  = :skode.version()
-"0.84.0" = :skode.pulp_version()
+"0.85.0" = :skode.pulp_version()
 ```
 
 ### 3. Erlang
@@ -187,6 +187,22 @@ pub fn demo() {
   // => ["V -3.5"]
 }
 ```
+
+---
+
+## Web Voice Editor & Live Synthesis
+
+`skode` includes an interactive browser-based sound design editor built with [Lustre](https://github.com/hayleigh-dot-dev/lustre) and powered directly by an embedded WebAssembly build of the Skred audio engine.
+
+- **[Live Web Editor Demo](https://octetta.github.io/skode/)**
+
+### Running the Editor Locally
+
+```bash
+make serve
+```
+
+This compiles the Lustre JavaScript application, bundles the WASM synthesis engine, and starts a local web server at `http://localhost:8000`.
 
 ---
 

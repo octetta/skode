@@ -14,10 +14,11 @@ Written in pure Gleam with zero C/NIF dependencies. Runs natively on both the **
 
 ## Production Applications & Dogfooding
 
-`skode` is battle-tested in production across two flagship open-source audio applications:
+`skode` is battle-tested in production across three flagship open-source audio applications:
 
 * **[Skode Voice Editor](https://octetta.github.io/skode/)**: An interactive browser-based synthesizer voice designer built with Lustre 5. It dogfoods `skode/voice`, `skode/diff`, and `skode/transport/wasm` for reactive parameter diffing and zero-latency Web Audio preview.
 * **[Mod-to-Skode Tracker Studio](https://octetta.github.io/mod-to-skode/)** ([GitHub: octetta/mod-to-skode](https://github.com/octetta/mod-to-skode)): A heavy-duty Amiga / ProTracker MOD file converter and player. It tests `skode` under heavy load with dense multi-thousand-row song arrangements, relying on the AST, canonical printer, and `skode/transport/wasm` across both browser environments and standalone native CLI binaries (compiled via QuickJS).
+* **[Sid-to-Skode Studio](https://octetta.github.io/sid-to-skode/)** ([GitHub: octetta/sid-to-skode](https://github.com/octetta/sid-to-skode)): An authentic Commodore 64 MOS 6581/8580 SID converter and chiptune player. It converts rapid 50 Hz register write streams into delta-compressed Skode sequences, dogfooding `skode`'s AST and `skode/transport/wasm` dispatch.
 
 ---
 

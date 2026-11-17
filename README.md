@@ -216,6 +216,79 @@ This compiles the Lustre JavaScript application, bundles the WASM synthesis engi
 
 ---
 
+## Zero-Latency Browser Audio for BEAM Developers
+
+For BEAM developers (Gleam, Elixir/Phoenix, Erlang) building web applications, streaming raw PCM audio over WebSockets or wrestling with stateful audio DOM components often leads to latency, jitter, and dropped frames.
+
+The **Skode + Pulp WASM** model flips this entirely:
+
+> **"BEAM Computes, Browser Plays"**  
+> Your BEAM backend manages game state, user interactions, generative music, or collaborative chords. Instead of streaming megabytes of heavy audio, it pushes tiny, human-readable Skode commands (a few bytes: `"v0 w1 f440 a-6 T"`). The browser's embedded WebAssembly DSP engine synthesizes the sound locally at 44.1 kHz with zero network lag and zero server audio load.
+
+### 1. Pure Gleam / Lustre Frontend (The 2-Line Pattern)
+
+If your frontend is built with Gleam or [Lustre](https://hexdocs.pm/lustre/), triggering real-time synthesis requires zero FFI boilerplate:
+
+```gleam
+import skode/transport/wasm
+
+pub fn play_sound() {
+  // 1. Boots the DSP loop on first user click/touch
+  let assert Ok(Nil) = wasm.start_default()
+
+  // 2. Play an analog lead, drum hit, or sequence locally
+  let assert Ok(Nil) = wasm.send_text("v0 w1 f440 a-6 T")
+}
+```
+
+### 2. Phoenix / Elixir (The Frictionless Event Pattern)
+
+Forget heavy, fragile LiveView audio components. Use a clean, fire-and-forget event pattern that never fights the DOM:
+
+**On the Server (`page_live.ex`, Channels, or Controller):**
+```elixir
+# Send sound effects, notifications, or musical chords as tiny strings:
+push_event(socket, "skode", %{cmd: "v0 n60 T v1 n64 T v2 n67 T"})
+```
+
+**In the Browser (`app.js`):**
+```javascript
+// 3 lines in your app.js: listen and play locally
+window.addEventListener("phx:skode", (e) => {
+  window.Module?.ccall("skred_command", "number", ["string"], [e.detail.cmd]);
+});
+```
+
+### 3. Plain HTML & JavaScript (No Framework Required)
+
+Drop the bundled runtime (`skred_api.js` + `skred_api.wasm`) into any static website, game, or presentation:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="skred_api.js"></script>
+</head>
+<body>
+  <button id="btn">Play 440 Hz Saw</button>
+
+  <script>
+    document.getElementById("btn").addEventListener("click", () => {
+      // Boot audio on first user gesture
+      if (!window._started) {
+        Module._skred_start(128, 16, 0);
+        window._started = true;
+      }
+      // Send any Skode commands
+      Module.ccall("skred_command", "number", ["string"], ["v0 w1 f440 a-6 T"]);
+    });
+  </script>
+</body>
+</html>
+```
+
+---
+
 ## Engine Transports
 
 `skode` provides zero-friction transports for interacting directly with Pulp's `mini-skred` engine across different runtime environments:

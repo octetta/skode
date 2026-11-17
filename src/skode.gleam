@@ -29,7 +29,7 @@ import skode/gen/version_gen
 // ---- Versions ----
 
 /// Version of the Skode AST & parsing package.
-pub const version = "0.3.0"
+pub const version = "1.0.0"
 
 /// Upstream Pulp / Skred audio engine release version this AST aligns with.
 pub const pulp_version = version_gen.pulp_version

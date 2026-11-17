@@ -42,7 +42,7 @@ fn num(f: Float) -> skode.Arg {
 pub fn main() {
   let results = [
     // package and aligned engine versions
-    check("skode package version", skode.version, "0.3.0"),
+    check("skode package version", skode.version, "1.0.0"),
     check("aligned pulp version", skode.pulp_version, "0.85.0"),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
@@ -258,7 +258,7 @@ pub fn main() {
     roundtrip("spaced defer", "~ 1.5 f 440\n+ -3 n57,12 l1"),
     roundtrip("bare g", "g"),
     roundtrip("envelope 2-arg and flat", "t0.01,0.05 t"),
-    roundtrip("links G, H, HS", "G ( 1 2 ) H ( 3 ) HS ( 0 1 2 )"),
+    roundtrip("links G, H, HS", "G 1,2 H 3 HS 0,1"),
     roundtrip("clock", "M 125 96\nA5,0.025,0.975 /cex 0,4,0 ce 127"),
     // master volume (V)
     check("master volume op", ops("V-6"), [MasterVolume(-6.0)]),

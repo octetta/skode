@@ -32,14 +32,14 @@ gleam add skode
 Or in `gleam.toml`:
 ```toml
 [dependencies]
-skode = ">= 0.3.0 and < 1.0.0"
+skode = ">= 1.0.0 and < 2.0.0"
 ```
 
 ### Elixir (`mix.exs`)
 ```elixir
 def deps do
   [
-    {:skode, "~> 0.3.0"}
+    {:skode, "~> 1.0.0"}
   ]
 end
 ```
@@ -47,7 +47,7 @@ end
 ### Erlang (`rebar.config`)
 ```erlang
 {deps, [
-    {skode, "0.3.0"}
+    {skode, "1.0.0"}
 ]}.
 ```
 
@@ -55,7 +55,7 @@ end
 Add to your project's `rebar.config`:
 ```erlang
 {deps, [
-    {skode, "0.3.0"}
+    {skode, "1.0.0"}
 ]}.
 ```
 
@@ -99,7 +99,7 @@ iodata = :skode.program_to_string(chunks)
 # => "v0 w301 n60 l1\n[bass] wt 100"
 
 # Check versions
-"0.3.0"  = :skode.version()
+"1.0.0"  = :skode.version()
 "0.85.0" = :skode.pulp_version()
 ```
 

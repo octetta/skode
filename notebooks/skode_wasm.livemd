@@ -15,7 +15,7 @@ This Livebook notebook demonstrates **zero-dependency browser audio**:
 * **Zero Server Audio Drivers**: Your Livebook host (local workstation, remote server, Docker container, or Fly.io instance) requires **no** ALSA, PulseAudio, PipeWire, Jack, or C compilation toolchain.
 * **Reactive Elixir Control**: Elixir cells send Skode commands down to the browser audio engine in real time using `Kino.JS.Live`.
 
-> **Note**: When Skode is released on Hex.pm, you will also be able to add `{:skode, "~> 0.3"}` to `Mix.install/1` to use Skode's Gleam/Elixir builder API.
+> **Note**: When Skode is released on Hex.pm, you will also be able to add `{:skode, "~> 1.0"}` to `Mix.install/1` to use Skode's Gleam/Elixir builder API.
 
 ---
 

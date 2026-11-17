@@ -32,17 +32,21 @@ import skode/param
 import skode/pattern.{
   type Pattern, Pattern, PatternPaused, PatternRunning, PatternStopped,
 }
+import skode/transport/wasm
 
 // -----------------------------------------------------------------------------
-// FFI Declarations
+// FFI Declarations & Transport Integration
 // -----------------------------------------------------------------------------
 
 @external(javascript, "./editor_ffi.mjs", "copy_to_clipboard")
 fn copy_to_clipboard(text: String) -> Nil
 
-@external(javascript, "./editor_ffi.mjs", "send_skode_command")
-fn send_skode_command(_cmd: String) -> String {
-  ""
+/// Dispatch a Skode command to the native audio engine via the official WASM transport.
+fn send_skode_command(cmd: String) -> String {
+  case wasm.exec(cmd) {
+    Ok(output) -> output
+    Error(err) -> "Error: " <> err
+  }
 }
 
 @external(javascript, "./editor_ffi.mjs", "render_waveform_buffer")

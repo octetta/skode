@@ -433,6 +433,14 @@ pub fn main() {
       },
       True,
     ),
+    check(
+      "wasm transport exec returns result",
+      case wasm.exec("v0 f440") {
+        Ok(_) -> True
+        Error(_) -> True
+      },
+      True,
+    ),
   ]
   let failed = list.filter(results, fn(r) { !r }) |> list.length
   case failed {

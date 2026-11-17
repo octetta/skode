@@ -4,6 +4,7 @@
 [![HexDocs](https://img.shields.io/badge/hex-docs-purple.svg)](https://hexdocs.pm/skode/)
 [![Engine Alignment](https://img.shields.io/badge/skred-v0.85.0-ff69b4.svg)](https://github.com/octetta/pulp)
 [![BEAM](https://img.shields.io/badge/BEAM-Erlang%20%7C%20Elixir%20%7C%20Gleam%20%7C%20LFE%20%7C%20erlua-a30535.svg)](https://erlang.org)
+[![Run in Livebook](https://livebook.dev/badge/v1/pink.svg)](https://livebook.dev/run?url=https://github.com/octetta/skode/blob/main/notebooks/skode_wasm.livemd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Type-safe AST, parser, and canonical serializer for **Skode**—the live-coding and musical command language of the [Skred audio engine](https://github.com/octetta/pulp).
@@ -286,6 +287,26 @@ Drop the bundled runtime (`skred_api.js` + `skred_api.wasm`) into any static web
 </body>
 </html>
 ```
+
+### 4. Interactive Livebook (Zero Server Audio Dependencies)
+
+[![Run in Livebook](https://livebook.dev/badge/v1/pink.svg)](https://livebook.dev/run?url=https://github.com/octetta/skode/blob/main/notebooks/skode_wasm.livemd)
+
+Run synthesis directly inside [Livebook](https://livebook.dev/) without installing any native audio drivers, ALSA, or C libraries on your Livebook host:
+
+```elixir
+# 1. Start the client-side WebAssembly widget
+audio = SkodeAudio.new()
+
+# 2. Trigger chords, sequences, and sweeps from Elixir cells
+SkodeAudio.play(audio, """
+v0 w1 f220.00 a-6 T
+v1 w1 f277.18 a-6 T
+v2 w1 f329.63 a-6 T
+""")
+```
+
+Open [`notebooks/skode_wasm.livemd`](notebooks/skode_wasm.livemd) in Livebook or click the badge above to explore polyphony, low-pass filter sweeps, algorithmic sequencing, and SID chiptune voices.
 
 ---
 

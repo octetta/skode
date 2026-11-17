@@ -1,0 +1,322 @@
+# Skode Audio: Browser WebAssembly Synthesis
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14"}
+])
+```
+
+## Overview
+
+[Skode](https://github.com/octetta/skode) is a micro-language and BEAM/JS client for the native [Pulp](https://github.com/octetta/pulp) audio synthesis engine.
+
+This Livebook notebook demonstrates **zero-dependency browser audio**:
+* **100% Client-Side Synthesis**: The native Pulp C DSP engine runs as WebAssembly directly inside your browser at 44.1 kHz via the Web Audio API.
+* **Zero Server Audio Drivers**: Your Livebook host (local workstation, remote server, Docker container, or Fly.io instance) requires **no** ALSA, PulseAudio, PipeWire, Jack, or C compilation toolchain.
+* **Reactive Elixir Control**: Elixir cells send Skode commands down to the browser audio engine in real time using `Kino.JS.Live`.
+
+> **Note**: When Skode is released on Hex.pm, you will also be able to add `{:skode, "~> 0.3"}` to `Mix.install/1` to use Skode's Gleam/Elixir builder API.
+
+---
+
+## 1. Define the Livebook Audio Component
+
+The `SkodeAudio` module uses `Kino.JS.Live` to load the official Pulp WebAssembly binary from `https://octetta.github.io/skode/wasm/skred_api.js` and bridge Elixir events to the engine.
+
+```elixir
+defmodule SkodeAudio do
+  use Kino.JS
+  use Kino.JS.Live
+
+  @doc """
+  Create a new Skode WebAssembly audio widget.
+  """
+  def new() do
+    Kino.JS.Live.new(__MODULE__, nil)
+  end
+
+  @doc """
+  Send a Skode command string to the WebAssembly engine.
+  """
+  def play(kino, command) when is_binary(command) do
+    Kino.JS.Live.cast(kino, {:play, command})
+  end
+
+  @doc """
+  Stop all active voices immediately (panic).
+  """
+  def stop(kino) do
+    Kino.JS.Live.cast(kino, :stop)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Kino.JS.Live Server Callbacks
+  # ---------------------------------------------------------------------------
+
+  @impl true
+  def init(_payload, ctx) do
+    {:ok, assign(ctx, status: :ready)}
+  end
+
+  @impl true
+  def handle_connect(ctx) do
+    {:ok, %{}, ctx}
+  end
+
+  @impl true
+  def handle_cast({:play, command}, ctx) do
+    broadcast_event(ctx, "play", %{command: command})
+    {:noreply, ctx}
+  end
+
+  @impl true
+  def handle_cast(:stop, ctx) do
+    broadcast_event(ctx, "stop", %{})
+    {:noreply, ctx}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Browser-Side JavaScript Asset
+  # ---------------------------------------------------------------------------
+
+  asset "main.js" do
+    """
+    export function init(ctx, data) {
+      ctx.root.innerHTML = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 8px; padding: 14px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600; color: #f0f6fc; font-size: 14px;">Skode / Pulp WebAssembly Engine</span>
+              <span id="badge" style="font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #21262d; border: 1px solid #30363d; color: #8b949e;">Loading WASM...</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-start" style="background: #238636; color: #fff; border: 1px solid rgba(240,246,252,0.1); border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer;">
+                Start Audio Engine
+              </button>
+              <button id="btn-panic" style="background: #da3633; color: #fff; border: 1px solid rgba(240,246,252,0.1); border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer;">
+                Panic / Stop
+              </button>
+            </div>
+          </div>
+          <div id="log" style="font-family: monospace; font-size: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; height: 95px; overflow-y: auto; color: #7ee787;">
+            [pulp] Initializing...
+          </div>
+        </div>
+      `;
+
+      const logEl = ctx.root.querySelector("#log");
+      const badgeEl = ctx.root.querySelector("#badge");
+      const btnStart = ctx.root.querySelector("#btn-start");
+      const btnPanic = ctx.root.querySelector("#btn-panic");
+
+      function log(msg) {
+        if (!logEl) return;
+        const line = document.createElement("div");
+        line.textContent = msg;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function setBadge(text, color, bg) {
+        if (!badgeEl) return;
+        badgeEl.textContent = text;
+        badgeEl.style.color = color;
+        badgeEl.style.background = bg;
+      }
+
+      window.Module = window.Module || {};
+      if (!window.Module.locateFile) {
+        window.Module.locateFile = function(path) {
+          return "https://octetta.github.io/skode/wasm/" + path;
+        };
+      }
+
+      function loadScript(url) {
+        return new Promise((resolve, reject) => {
+          if (window.Module && (window.Module._skred_start || window.Module.ccall)) {
+            return resolve();
+          }
+          const existing = document.querySelector("script[data-skode-wasm]");
+          if (existing) {
+            if (window.Module && window.Module._skred_start) return resolve();
+            existing.addEventListener("load", () => resolve());
+            existing.addEventListener("error", (e) => reject(e));
+            return;
+          }
+          const s = document.createElement("script");
+          s.dataset.skodeWasm = "true";
+          s.src = url;
+          s.async = true;
+          s.onload = () => resolve();
+          s.onerror = (e) => reject(e);
+          document.head.appendChild(s);
+        });
+      }
+
+      let engineStarted = false;
+
+      function startAudio() {
+        try {
+          if (window.Module && typeof window.Module._skred_start === "function") {
+            if (!engineStarted) {
+              window.Module._skred_start(128, 16, 0);
+              engineStarted = true;
+            }
+            if (typeof window.Module._skred_logger === "function") {
+              window.Module._skred_logger(1);
+            }
+            setBadge("Engine Active", "#56d364", "#23863622");
+            log("[pulp] WebAudio active (128 frames, 16 voices, 44.1 kHz).");
+          } else {
+            log("[pulp] WebAssembly module not ready yet.");
+          }
+        } catch (err) {
+          log("[pulp] Start error: " + err);
+        }
+      }
+
+      function executeCommand(cmd) {
+        if (!window.Module || typeof window.Module.ccall !== "function") {
+          log("[pulp] Cannot send: WASM module not loaded.");
+          return;
+        }
+        if (!engineStarted && typeof window.Module._skred_start === "function") {
+          startAudio();
+        }
+        const lines = cmd.split("\\n");
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed) {
+            log("> " + trimmed);
+            window.Module.ccall("skred_command", "number", ["string"], [trimmed]);
+            try {
+              const out = window.Module.ccall("skred_log", "string", [], []);
+              if (out && out.trim()) {
+                log(out.trim());
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      btnStart.addEventListener("click", () => startAudio());
+      btnPanic.addEventListener("click", () => {
+        executeCommand("K");
+        log("[pulp] All voices killed.");
+      });
+
+      loadScript("https://octetta.github.io/skode/wasm/skred_api.js")
+        .then(() => {
+          setBadge("Ready to Start", "#58a6ff", "#1f6feb22");
+          log("[pulp] WASM binary loaded from CDN. Click 'Start Audio Engine'.");
+        })
+        .catch((err) => {
+          setBadge("Load Error", "#f85149", "#da363322");
+          log("[pulp] Failed to load WASM: " + err);
+        });
+
+      ctx.handleEvent("play", ({ command }) => executeCommand(command));
+      ctx.handleEvent("stop", () => executeCommand("K"));
+    }
+    """
+  end
+end
+```
+
+---
+
+## 2. Boot the Audio Engine
+
+Evaluate the cell below to render the Skode Audio widget.
+
+> **Important**: Click **Start Audio Engine** on the widget before triggering notes. Web browsers require a user gesture on the page to un-mute the Web Audio subsystem.
+
+```elixir
+audio = SkodeAudio.new()
+```
+
+---
+
+## 3. Play Notes and Polyphonic Chords
+
+Skode commands configure voices (`v0`..`v15`), waveforms (`w`), frequencies (`f`), amplitudes (`a` in dB), and trigger envelopes (`T`).
+
+Let's play an **A Major Triad** across 3 voices:
+* Voice 0: A3 (220.00 Hz)
+* Voice 1: C#4 (277.18 Hz)
+* Voice 2: E4 (329.63 Hz)
+
+```elixir
+SkodeAudio.play(audio, """
+v0 w1 f220.00 a-6 T
+v1 w1 f277.18 a-6 T
+v2 w1 f329.63 a-6 T
+""")
+```
+
+---
+
+## 4. Waveforms & Resonant Filters
+
+Pulp offers classic and hybrid synthesizer waveforms:
+* `w1` - Sawtooth
+* `w2` - Square / Pulse (with `w10`..`w90` pulse widths)
+* `c<hz>` - Low-pass filter cutoff frequency
+* `q<val>` - Filter resonance / Q factor
+
+Let's trigger a deep resonant bass pulse:
+
+```elixir
+SkodeAudio.play(audio, "v0 w20 f110.00 a-3 c600 q5 T")
+```
+
+---
+
+## 5. Algorithmic Sequencer in Elixir
+
+Because Elixir manages concurrency and timing, we can sequence patterns using simple Elixir loops or `Task`:
+
+```elixir
+arpeggio = [
+  220.00, # A3
+  277.18, # C#4
+  329.63, # E4
+  440.00, # A4
+  554.37, # C#5
+  659.25, # E5
+  880.00  # A5
+]
+
+for _cycle <- 1..2, freq <- arpeggio do
+  SkodeAudio.play(audio, "v0 w1 f#{freq} a-8 T")
+  Process.sleep(125)
+end
+```
+
+---
+
+## 6. Ksynth SID Chiptune Sounds (Commodore 64)
+
+Pulp 0.85.0 includes the **Ksynth** SID emulation engine (`w300`..`w302`):
+* `w300` - SID 6581 Triangle
+* `w301` - SID 6581 Sawtooth
+* `w302` - SID 6581 Pulse
+
+Let's trigger an 8-bit chiptune lead:
+
+```elixir
+SkodeAudio.play(audio, """
+v0 w300 f261.63 a-4 T
+v1 w302 f523.25 a-8 T
+""")
+```
+
+---
+
+## 7. Stop / Silence All Voices
+
+To instantly silence all active voices:
+
+```elixir
+SkodeAudio.stop(audio)
+```

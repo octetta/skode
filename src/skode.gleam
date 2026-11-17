@@ -25,6 +25,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import skode/gen/version_gen
+import skode/param
 
 // ---- Versions ----
 
@@ -709,21 +710,10 @@ fn typed(cmd: Command, fs: List(Float)) -> Op {
 
 // ---- Printer (canonical: atom then comma-joined numbers) ----
 
-/// Whole numbers print without a decimal point. A float Gleam would print in
-/// exponent form (e.g. 1.0e-5) prints as its integer part, because the C lexer
-/// has no exponent syntax outside arrays.
+/// Format a float cleanly via param.format_float: whole numbers without decimal point,
+/// otherwise standard decimal string expanding any scientific notation.
 fn fmt(f: Float) -> String {
-  let t = float.truncate(f)
-  case int.to_float(t) == f {
-    True -> int.to_string(t)
-    False -> {
-      let s = float.to_string(f)
-      case string.contains(s, "e") {
-        True -> int.to_string(t)
-        False -> s
-      }
-    }
-  }
+  param.format_float(f)
 }
 
 fn i(x: Int) -> String {

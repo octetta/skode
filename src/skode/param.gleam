@@ -6,15 +6,105 @@
 
 import gleam/float
 import gleam/int
+import gleam/string
 
 // ---- Formatting Helper ----
 
-/// Format a float cleanly: whole numbers without decimal point, otherwise standard float string.
+/// Format a float cleanly: whole numbers without decimal point, otherwise standard float string
+/// without scientific notation (e.g. expanding 1.0e-5 into 0.00001).
 pub fn format_float(f: Float) -> String {
   let t = float.truncate(f)
   case int.to_float(t) == f {
     True -> int.to_string(t)
-    False -> float.to_string(f)
+    False -> {
+      let raw = float.to_string(f)
+      expand_scientific(raw)
+    }
+  }
+}
+
+fn expand_scientific(raw: String) -> String {
+  let lower = string.lowercase(raw)
+  case string.split(lower, "e") {
+    [mantissa, exp_str] -> {
+      let is_neg = string.starts_with(mantissa, "-")
+      let pos_mantissa = case is_neg {
+        True -> string.drop_start(mantissa, 1)
+        False -> mantissa
+      }
+      let clean_exp = case string.starts_with(exp_str, "+") {
+        True -> string.drop_start(exp_str, 1)
+        False -> exp_str
+      }
+      case int.parse(clean_exp) {
+        Ok(exp) -> {
+          let #(whole, frac) = case string.split(pos_mantissa, ".") {
+            [w, fr] -> #(w, fr)
+            [w] -> #(w, "")
+            _ -> #(pos_mantissa, "")
+          }
+          let formatted = case exp < 0 {
+            True -> {
+              let shift = -exp
+              let whole_len = string.length(whole)
+              case whole_len <= shift {
+                True -> {
+                  let zeros = string.repeat("0", shift - whole_len)
+                  "0." <> zeros <> whole <> frac
+                }
+                False -> {
+                  let split_pt = whole_len - shift
+                  let w_part = string.slice(whole, 0, split_pt)
+                  let f_part = string.slice(whole, split_pt, whole_len)
+                  w_part <> "." <> f_part <> frac
+                }
+              }
+            }
+            False -> {
+              let frac_len = string.length(frac)
+              case frac_len <= exp {
+                True -> {
+                  let zeros = string.repeat("0", exp - frac_len)
+                  whole <> frac <> zeros
+                }
+                False -> {
+                  let w_part = string.slice(frac, 0, exp)
+                  let f_part = string.slice(frac, exp, frac_len)
+                  whole <> w_part <> "." <> f_part
+                }
+              }
+            }
+          }
+          let res = case is_neg {
+            True -> "-" <> formatted
+            False -> formatted
+          }
+          trim_trailing_zeros(res)
+        }
+        Error(_) -> raw
+      }
+    }
+    _ -> raw
+  }
+}
+
+fn trim_trailing_zeros(s: String) -> String {
+  case string.contains(s, ".") {
+    False -> s
+    True -> {
+      let trimmed = do_trim_trailing_zeros(s)
+      case string.ends_with(trimmed, ".") {
+        True -> string.drop_end(trimmed, 1)
+        False -> trimmed
+      }
+    }
+  }
+}
+
+fn do_trim_trailing_zeros(s: String) -> String {
+  case string.ends_with(s, "0") {
+    True -> do_trim_trailing_zeros(string.drop_end(s, 1))
+    False -> s
   }
 }
 

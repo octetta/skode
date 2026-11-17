@@ -167,12 +167,8 @@ pub fn to_skode(voice: Voice) -> String {
     True -> list.append(cmds, ["n" <> param.format_float(voice.midi_note)])
     False -> cmds
   }
-  let cmds = case voice.midi_cents != d.midi_cents {
-    True -> list.append(cmds, ["c" <> param.format_float(voice.midi_cents)])
-    False -> cmds
-  }
   let cmds = case voice.direction != d.direction {
-    True -> list.append(cmds, ["w" <> int.to_string(voice.direction)])
+    True -> list.append(cmds, ["b" <> int.to_string(voice.direction)])
     False -> cmds
   }
   let cmds = case voice.loop_enabled != d.loop_enabled {
@@ -180,7 +176,7 @@ pub fn to_skode(voice: Voice) -> String {
     False -> cmds
   }
   let cmds = case voice.loop_count != d.loop_count {
-    True -> list.append(cmds, ["lc" <> int.to_string(voice.loop_count)])
+    True -> list.append(cmds, ["BC" <> int.to_string(voice.loop_count)])
     False -> cmds
   }
   let cmds = case voice.filter_mode != d.filter_mode {
@@ -201,7 +197,7 @@ pub fn to_skode(voice: Voice) -> String {
     False -> cmds
   }
   let cmds = case voice.amp_envelope_mode != d.amp_envelope_mode {
-    True -> list.append(cmds, ["em" <> int.to_string(voice.amp_envelope_mode)])
+    True -> list.append(cmds, ["tm" <> int.to_string(voice.amp_envelope_mode)])
     False -> cmds
   }
   let cmds = case voice.pan != d.pan {
@@ -209,52 +205,55 @@ pub fn to_skode(voice: Voice) -> String {
     False -> cmds
   }
   let cmds = case voice.disconnect != d.disconnect {
-    True -> list.append(cmds, ["mu" <> int.to_string(voice.disconnect)])
+    True -> list.append(cmds, ["m" <> int.to_string(voice.disconnect)])
     False -> cmds
   }
   let cmds = case voice.record != d.record {
-    True -> list.append(cmds, ["rec" <> int.to_string(voice.record)])
+    True -> list.append(cmds, ["r" <> int.to_string(voice.record)])
     False -> cmds
   }
   let cmds = case voice.delay_send != d.delay_send {
     True -> list.append(cmds, ["ds" <> param.format_float(voice.delay_send)])
     False -> cmds
   }
-  let cmds = case voice.cz_mode != d.cz_mode {
-    True -> list.append(cmds, ["c1" <> int.to_string(voice.cz_mode)])
-    False -> cmds
-  }
-  let cmds = case voice.cz_distortion != d.cz_distortion {
-    True -> list.append(cmds, ["c1" <> param.format_float(voice.cz_distortion)])
-    False -> cmds
-  }
-  let cmds = case voice.cz_mod_osc != d.cz_mod_osc {
-    True -> list.append(cmds, ["cmod" <> int.to_string(voice.cz_mod_osc)])
-    False -> cmds
-  }
-  let cmds = case voice.cz_mod_depth != d.cz_mod_depth {
+  let cmds = case voice.cz_mode > 0 {
     True ->
-      list.append(cmds, ["cmod" <> param.format_float(voice.cz_mod_depth)])
+      list.append(cmds, [
+        "c"
+        <> int.to_string(voice.cz_mode)
+        <> ","
+        <> param.format_float(voice.cz_distortion),
+      ])
+    False -> cmds
+  }
+  let cmds = case voice.cz_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "C"
+        <> int.to_string(voice.cz_mod_osc)
+        <> ","
+        <> param.format_float(voice.cz_mod_depth),
+      ])
     False -> cmds
   }
   let cmds = case voice.cz_env_depth != d.cz_env_depth {
     True -> list.append(cmds, ["cd" <> param.format_float(voice.cz_env_depth)])
     False -> cmds
   }
-  let cmds = case voice.freq_mod_osc != d.freq_mod_osc {
-    True -> list.append(cmds, ["F" <> int.to_string(voice.freq_mod_osc)])
-    False -> cmds
-  }
-  let cmds = case voice.freq_mod_depth != d.freq_mod_depth {
-    True -> list.append(cmds, ["F" <> param.format_float(voice.freq_mod_depth)])
-    False -> cmds
-  }
-  let cmds = case voice.freq_mod_adder != d.freq_mod_adder {
-    True -> list.append(cmds, ["F" <> param.format_float(voice.freq_mod_adder)])
+  let cmds = case voice.freq_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "F"
+        <> int.to_string(voice.freq_mod_osc)
+        <> ","
+        <> param.format_float(voice.freq_mod_depth)
+        <> ","
+        <> param.format_float(voice.freq_mod_adder),
+      ])
     False -> cmds
   }
   let cmds = case voice.freq_mod_mode != d.freq_mod_mode {
-    True -> list.append(cmds, ["FM" <> int.to_string(voice.freq_mod_mode)])
+    True -> list.append(cmds, ["FF" <> int.to_string(voice.freq_mod_mode)])
     False -> cmds
   }
   let cmds = case voice.freq_mod_feedback != d.freq_mod_feedback {
@@ -262,71 +261,67 @@ pub fn to_skode(voice: Voice) -> String {
       list.append(cmds, ["FB" <> param.format_float(voice.freq_mod_feedback)])
     False -> cmds
   }
-  let cmds = case voice.amp_mod_osc != d.amp_mod_osc {
-    True -> list.append(cmds, ["am" <> int.to_string(voice.amp_mod_osc)])
-    False -> cmds
-  }
-  let cmds = case voice.amp_mod_depth != d.amp_mod_depth {
-    True -> list.append(cmds, ["am" <> param.format_float(voice.amp_mod_depth)])
-    False -> cmds
-  }
-  let cmds = case voice.amp_mod_adder != d.amp_mod_adder {
-    True -> list.append(cmds, ["am" <> param.format_float(voice.amp_mod_adder)])
-    False -> cmds
-  }
-  let cmds = case voice.pan_mod_osc != d.pan_mod_osc {
-    True -> list.append(cmds, ["pm" <> int.to_string(voice.pan_mod_osc)])
-    False -> cmds
-  }
-  let cmds = case voice.pan_mod_depth != d.pan_mod_depth {
-    True -> list.append(cmds, ["pm" <> param.format_float(voice.pan_mod_depth)])
-    False -> cmds
-  }
-  let cmds = case voice.pan_mod_adder != d.pan_mod_adder {
-    True -> list.append(cmds, ["pm" <> param.format_float(voice.pan_mod_adder)])
-    False -> cmds
-  }
-  let cmds = case voice.ring_osc != d.ring_osc {
-    True -> list.append(cmds, ["XM" <> int.to_string(voice.ring_osc)])
-    False -> cmds
-  }
-  let cmds = case voice.ring_amount != d.ring_amount {
-    True -> list.append(cmds, ["XM" <> param.format_float(voice.ring_amount)])
-    False -> cmds
-  }
-  let cmds = case voice.sample_hold_ratio != d.sample_hold_ratio {
+  let cmds = case voice.amp_mod_osc >= 0 {
     True ->
-      list.append(cmds, ["sh" <> param.format_float(voice.sample_hold_ratio)])
+      list.append(cmds, [
+        "A"
+        <> int.to_string(voice.amp_mod_osc)
+        <> ","
+        <> param.format_float(voice.amp_mod_depth)
+        <> ","
+        <> param.format_float(voice.amp_mod_adder),
+      ])
     False -> cmds
   }
-  let cmds = case voice.sample_hold_mode != d.sample_hold_mode {
-    True -> list.append(cmds, ["sh" <> int.to_string(voice.sample_hold_mode)])
+  let cmds = case voice.pan_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "P"
+        <> int.to_string(voice.pan_mod_osc)
+        <> ","
+        <> param.format_float(voice.pan_mod_depth)
+        <> ","
+        <> param.format_float(voice.pan_mod_adder),
+      ])
+    False -> cmds
+  }
+  let cmds = case voice.ring_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "XM"
+        <> int.to_string(voice.ring_osc)
+        <> ","
+        <> param.format_float(voice.ring_amount),
+      ])
+    False -> cmds
+  }
+  let cmds = case voice.sample_hold_ratio >. 0.0 {
+    True ->
+      list.append(cmds, [
+        "h"
+        <> param.format_float(voice.sample_hold_ratio)
+        <> ","
+        <> int.to_string(voice.sample_hold_mode),
+      ])
     False -> cmds
   }
   let cmds = case voice.quantize != d.quantize {
-    True -> list.append(cmds, ["q" <> int.to_string(voice.quantize)])
+    True -> list.append(cmds, ["bc" <> int.to_string(voice.quantize)])
     False -> cmds
   }
-  let cmds = case voice.glissando_enable != d.glissando_enable {
-    True -> list.append(cmds, ["gl" <> int.to_string(voice.glissando_enable)])
-    False -> cmds
-  }
-  let cmds = case voice.glissando_mode != d.glissando_mode {
-    True -> list.append(cmds, ["gl" <> int.to_string(voice.glissando_mode)])
-    False -> cmds
-  }
-  let cmds = case voice.glissando_time != d.glissando_time {
+  let cmds = case voice.glissando_mode > 0 {
     True ->
-      list.append(cmds, ["gl" <> param.format_float(voice.glissando_time)])
-    False -> cmds
-  }
-  let cmds = case voice.smoother_enable != d.smoother_enable {
-    True -> list.append(cmds, ["sm" <> int.to_string(voice.smoother_enable)])
+      list.append(cmds, [
+        "g"
+        <> int.to_string(voice.glissando_mode)
+        <> ","
+        <> param.format_float(voice.glissando_time),
+      ])
     False -> cmds
   }
   let cmds = case voice.smoother_smoothing != d.smoother_smoothing {
     True ->
-      list.append(cmds, ["sm" <> param.format_float(voice.smoother_smoothing)])
+      list.append(cmds, ["s" <> param.format_float(voice.smoother_smoothing)])
     False -> cmds
   }
   let cmds = case voice.freq_env_depth != d.freq_env_depth {
@@ -380,21 +375,24 @@ pub fn to_skode(voice: Voice) -> String {
     False -> cmds
   }
   let cmds = case voice.link_trig != d.link_trig {
-    True -> list.append(cmds, ["td" <> param.format_float(voice.link_trig)])
+    True -> list.append(cmds, ["L" <> param.format_float(voice.link_trig)])
     False -> cmds
   }
   let cmds = case voice.freq_bend != d.freq_bend {
-    True -> list.append(cmds, ["b" <> param.format_float(voice.freq_bend)])
+    True -> list.append(cmds, ["fb" <> param.format_float(voice.freq_bend)])
     False -> cmds
   }
-  let cmds = case voice.freq_bend_range != d.freq_bend_range {
+  let cmds = case
+    voice.freq_bend_range != d.freq_bend_range
+    || voice.freq_bend_offset != d.freq_bend_offset
+  {
     True ->
-      list.append(cmds, ["bp" <> param.format_float(voice.freq_bend_range)])
-    False -> cmds
-  }
-  let cmds = case voice.freq_bend_offset != d.freq_bend_offset {
-    True ->
-      list.append(cmds, ["bp" <> param.format_float(voice.freq_bend_offset)])
+      list.append(cmds, [
+        "fbp"
+        <> param.format_float(voice.freq_bend_range)
+        <> ","
+        <> param.format_float(voice.freq_bend_offset),
+      ])
     False -> cmds
   }
   let cmds = case voice.amp_bend != d.amp_bend {
@@ -418,58 +416,103 @@ pub fn to_skode_verbose(voice: Voice) -> String {
     "a" <> param.format_float(voice.user_amp),
   ]
   let cmds = list.append(cmds, ["n" <> param.format_float(voice.midi_note)])
-  let cmds = list.append(cmds, ["c" <> param.format_float(voice.midi_cents)])
-  let cmds = list.append(cmds, ["w" <> int.to_string(voice.direction)])
+  let cmds = list.append(cmds, ["b" <> int.to_string(voice.direction)])
   let cmds = list.append(cmds, ["B" <> int.to_string(voice.loop_enabled)])
-  let cmds = list.append(cmds, ["lc" <> int.to_string(voice.loop_count)])
+  let cmds = list.append(cmds, ["BC" <> int.to_string(voice.loop_count)])
   let cmds = list.append(cmds, ["j" <> int.to_string(voice.filter_mode)])
   let cmds = list.append(cmds, ["k" <> param.format_float(voice.filter_freq)])
   let cmds = list.append(cmds, ["q" <> param.format_float(voice.filter_res)])
   let cmds =
     list.append(cmds, ["kd" <> param.format_float(voice.filter_env_depth)])
-  let cmds = list.append(cmds, ["em" <> int.to_string(voice.amp_envelope_mode)])
+  let cmds = list.append(cmds, ["tm" <> int.to_string(voice.amp_envelope_mode)])
   let cmds = list.append(cmds, ["p" <> param.format_float(voice.pan)])
-  let cmds = list.append(cmds, ["mu" <> int.to_string(voice.disconnect)])
-  let cmds = list.append(cmds, ["rec" <> int.to_string(voice.record)])
+  let cmds = list.append(cmds, ["m" <> int.to_string(voice.disconnect)])
+  let cmds = list.append(cmds, ["r" <> int.to_string(voice.record)])
   let cmds = list.append(cmds, ["ds" <> param.format_float(voice.delay_send)])
-  let cmds = list.append(cmds, ["c1" <> int.to_string(voice.cz_mode)])
   let cmds =
-    list.append(cmds, ["c1" <> param.format_float(voice.cz_distortion)])
-  let cmds = list.append(cmds, ["cmod" <> int.to_string(voice.cz_mod_osc)])
-  let cmds =
-    list.append(cmds, ["cmod" <> param.format_float(voice.cz_mod_depth)])
+    list.append(cmds, [
+      "c"
+      <> int.to_string(voice.cz_mode)
+      <> ","
+      <> param.format_float(voice.cz_distortion),
+    ])
+  let cmds = case voice.cz_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "C"
+        <> int.to_string(voice.cz_mod_osc)
+        <> ","
+        <> param.format_float(voice.cz_mod_depth),
+      ])
+    False -> list.append(cmds, ["C-1"])
+  }
   let cmds = list.append(cmds, ["cd" <> param.format_float(voice.cz_env_depth)])
-  let cmds = list.append(cmds, ["F" <> int.to_string(voice.freq_mod_osc)])
-  let cmds =
-    list.append(cmds, ["F" <> param.format_float(voice.freq_mod_depth)])
-  let cmds =
-    list.append(cmds, ["F" <> param.format_float(voice.freq_mod_adder)])
-  let cmds = list.append(cmds, ["FM" <> int.to_string(voice.freq_mod_mode)])
+  let cmds = case voice.freq_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "F"
+        <> int.to_string(voice.freq_mod_osc)
+        <> ","
+        <> param.format_float(voice.freq_mod_depth)
+        <> ","
+        <> param.format_float(voice.freq_mod_adder),
+      ])
+    False -> list.append(cmds, ["F-1"])
+  }
+  let cmds = list.append(cmds, ["FF" <> int.to_string(voice.freq_mod_mode)])
   let cmds =
     list.append(cmds, ["FB" <> param.format_float(voice.freq_mod_feedback)])
-  let cmds = list.append(cmds, ["am" <> int.to_string(voice.amp_mod_osc)])
+  let cmds = case voice.amp_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "A"
+        <> int.to_string(voice.amp_mod_osc)
+        <> ","
+        <> param.format_float(voice.amp_mod_depth)
+        <> ","
+        <> param.format_float(voice.amp_mod_adder),
+      ])
+    False -> list.append(cmds, ["A-1"])
+  }
+  let cmds = case voice.pan_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "P"
+        <> int.to_string(voice.pan_mod_osc)
+        <> ","
+        <> param.format_float(voice.pan_mod_depth)
+        <> ","
+        <> param.format_float(voice.pan_mod_adder),
+      ])
+    False -> list.append(cmds, ["P-1"])
+  }
+  let cmds = case voice.ring_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "XM"
+        <> int.to_string(voice.ring_osc)
+        <> ","
+        <> param.format_float(voice.ring_amount),
+      ])
+    False -> list.append(cmds, ["XM-1"])
+  }
   let cmds =
-    list.append(cmds, ["am" <> param.format_float(voice.amp_mod_depth)])
+    list.append(cmds, [
+      "h"
+      <> param.format_float(voice.sample_hold_ratio)
+      <> ","
+      <> int.to_string(voice.sample_hold_mode),
+    ])
+  let cmds = list.append(cmds, ["bc" <> int.to_string(voice.quantize)])
   let cmds =
-    list.append(cmds, ["am" <> param.format_float(voice.amp_mod_adder)])
-  let cmds = list.append(cmds, ["pm" <> int.to_string(voice.pan_mod_osc)])
+    list.append(cmds, [
+      "g"
+      <> int.to_string(voice.glissando_mode)
+      <> ","
+      <> param.format_float(voice.glissando_time),
+    ])
   let cmds =
-    list.append(cmds, ["pm" <> param.format_float(voice.pan_mod_depth)])
-  let cmds =
-    list.append(cmds, ["pm" <> param.format_float(voice.pan_mod_adder)])
-  let cmds = list.append(cmds, ["XM" <> int.to_string(voice.ring_osc)])
-  let cmds = list.append(cmds, ["XM" <> param.format_float(voice.ring_amount)])
-  let cmds =
-    list.append(cmds, ["sh" <> param.format_float(voice.sample_hold_ratio)])
-  let cmds = list.append(cmds, ["sh" <> int.to_string(voice.sample_hold_mode)])
-  let cmds = list.append(cmds, ["q" <> int.to_string(voice.quantize)])
-  let cmds = list.append(cmds, ["gl" <> int.to_string(voice.glissando_enable)])
-  let cmds = list.append(cmds, ["gl" <> int.to_string(voice.glissando_mode)])
-  let cmds =
-    list.append(cmds, ["gl" <> param.format_float(voice.glissando_time)])
-  let cmds = list.append(cmds, ["sm" <> int.to_string(voice.smoother_enable)])
-  let cmds =
-    list.append(cmds, ["sm" <> param.format_float(voice.smoother_smoothing)])
+    list.append(cmds, ["s" <> param.format_float(voice.smoother_smoothing)])
   let cmds =
     list.append(cmds, ["pd" <> param.format_float(voice.freq_env_depth)])
   let cmds = case voice.link_sync {
@@ -505,12 +548,15 @@ pub fn to_skode_verbose(voice: Voice) -> String {
         ),
       ])
   }
-  let cmds = list.append(cmds, ["td" <> param.format_float(voice.link_trig)])
-  let cmds = list.append(cmds, ["b" <> param.format_float(voice.freq_bend)])
+  let cmds = list.append(cmds, ["L" <> param.format_float(voice.link_trig)])
+  let cmds = list.append(cmds, ["fb" <> param.format_float(voice.freq_bend)])
   let cmds =
-    list.append(cmds, ["bp" <> param.format_float(voice.freq_bend_range)])
-  let cmds =
-    list.append(cmds, ["bp" <> param.format_float(voice.freq_bend_offset)])
+    list.append(cmds, [
+      "fbp"
+      <> param.format_float(voice.freq_bend_range)
+      <> ","
+      <> param.format_float(voice.freq_bend_offset),
+    ])
   let cmds = list.append(cmds, ["ab" <> param.format_float(voice.amp_bend)])
   let cmds =
     list.append(cmds, ["abp" <> param.format_float(voice.amp_bend_range)])

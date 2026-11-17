@@ -22,12 +22,8 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
     True -> ["n" <> param.format_float(new.midi_note), ..diffs]
     False -> diffs
   }
-  let diffs = case old.midi_cents != new.midi_cents {
-    True -> ["c" <> param.format_float(new.midi_cents), ..diffs]
-    False -> diffs
-  }
   let diffs = case old.direction != new.direction {
-    True -> ["w" <> int.to_string(new.direction), ..diffs]
+    True -> ["b" <> int.to_string(new.direction), ..diffs]
     False -> diffs
   }
   let diffs = case old.loop_enabled != new.loop_enabled {
@@ -35,7 +31,7 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
     False -> diffs
   }
   let diffs = case old.loop_count != new.loop_count {
-    True -> ["lc" <> int.to_string(new.loop_count), ..diffs]
+    True -> ["BC" <> int.to_string(new.loop_count), ..diffs]
     False -> diffs
   }
   let diffs = case old.filter_mode != new.filter_mode {
@@ -55,7 +51,7 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
     False -> diffs
   }
   let diffs = case old.amp_envelope_mode != new.amp_envelope_mode {
-    True -> ["em" <> int.to_string(new.amp_envelope_mode), ..diffs]
+    True -> ["tm" <> int.to_string(new.amp_envelope_mode), ..diffs]
     False -> diffs
   }
   let diffs = case old.amp != new.amp {
@@ -67,119 +63,177 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
     False -> diffs
   }
   let diffs = case old.disconnect != new.disconnect {
-    True -> ["mu" <> int.to_string(new.disconnect), ..diffs]
+    True -> ["m" <> int.to_string(new.disconnect), ..diffs]
     False -> diffs
   }
   let diffs = case old.record != new.record {
-    True -> ["rec" <> int.to_string(new.record), ..diffs]
+    True -> ["r" <> int.to_string(new.record), ..diffs]
     False -> diffs
   }
   let diffs = case old.delay_send != new.delay_send {
     True -> ["ds" <> param.format_float(new.delay_send), ..diffs]
     False -> diffs
   }
-  let diffs = case old.cz_mode != new.cz_mode {
-    True -> ["c1" <> int.to_string(new.cz_mode), ..diffs]
+  let diffs = case
+    old.cz_mode != new.cz_mode || old.cz_distortion != new.cz_distortion
+  {
+    True ->
+      case new.cz_mode > 0 {
+        True -> [
+          "c"
+            <> int.to_string(new.cz_mode)
+            <> ","
+            <> param.format_float(new.cz_distortion),
+          ..diffs
+        ]
+        False -> ["c0", ..diffs]
+      }
     False -> diffs
   }
-  let diffs = case old.cz_distortion != new.cz_distortion {
-    True -> ["c1" <> param.format_float(new.cz_distortion), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.cz_mod_osc != new.cz_mod_osc {
-    True -> ["cmod" <> int.to_string(new.cz_mod_osc), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.cz_mod_depth != new.cz_mod_depth {
-    True -> ["cmod" <> param.format_float(new.cz_mod_depth), ..diffs]
+  let diffs = case
+    old.cz_mod_osc != new.cz_mod_osc || old.cz_mod_depth != new.cz_mod_depth
+  {
+    True ->
+      case new.cz_mod_osc >= 0 {
+        True -> [
+          "C"
+            <> int.to_string(new.cz_mod_osc)
+            <> ","
+            <> param.format_float(new.cz_mod_depth),
+          ..diffs
+        ]
+        False -> ["C-1", ..diffs]
+      }
     False -> diffs
   }
   let diffs = case old.cz_env_depth != new.cz_env_depth {
     True -> ["cd" <> param.format_float(new.cz_env_depth), ..diffs]
     False -> diffs
   }
-  let diffs = case old.freq_mod_osc != new.freq_mod_osc {
-    True -> ["F" <> int.to_string(new.freq_mod_osc), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.freq_mod_depth != new.freq_mod_depth {
-    True -> ["F" <> param.format_float(new.freq_mod_depth), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.freq_mod_adder != new.freq_mod_adder {
-    True -> ["F" <> param.format_float(new.freq_mod_adder), ..diffs]
+  let diffs = case
+    old.freq_mod_osc != new.freq_mod_osc
+    || old.freq_mod_depth != new.freq_mod_depth
+    || old.freq_mod_adder != new.freq_mod_adder
+  {
+    True ->
+      case new.freq_mod_osc >= 0 {
+        True -> [
+          "F"
+            <> int.to_string(new.freq_mod_osc)
+            <> ","
+            <> param.format_float(new.freq_mod_depth)
+            <> ","
+            <> param.format_float(new.freq_mod_adder),
+          ..diffs
+        ]
+        False -> ["F-1", ..diffs]
+      }
     False -> diffs
   }
   let diffs = case old.freq_mod_mode != new.freq_mod_mode {
-    True -> ["FM" <> int.to_string(new.freq_mod_mode), ..diffs]
+    True -> ["FF" <> int.to_string(new.freq_mod_mode), ..diffs]
     False -> diffs
   }
   let diffs = case old.freq_mod_feedback != new.freq_mod_feedback {
     True -> ["FB" <> param.format_float(new.freq_mod_feedback), ..diffs]
     False -> diffs
   }
-  let diffs = case old.amp_mod_osc != new.amp_mod_osc {
-    True -> ["am" <> int.to_string(new.amp_mod_osc), ..diffs]
+  let diffs = case
+    old.amp_mod_osc != new.amp_mod_osc
+    || old.amp_mod_depth != new.amp_mod_depth
+    || old.amp_mod_adder != new.amp_mod_adder
+  {
+    True ->
+      case new.amp_mod_osc >= 0 {
+        True -> [
+          "A"
+            <> int.to_string(new.amp_mod_osc)
+            <> ","
+            <> param.format_float(new.amp_mod_depth)
+            <> ","
+            <> param.format_float(new.amp_mod_adder),
+          ..diffs
+        ]
+        False -> ["A-1", ..diffs]
+      }
     False -> diffs
   }
-  let diffs = case old.amp_mod_depth != new.amp_mod_depth {
-    True -> ["am" <> param.format_float(new.amp_mod_depth), ..diffs]
+  let diffs = case
+    old.pan_mod_osc != new.pan_mod_osc
+    || old.pan_mod_depth != new.pan_mod_depth
+    || old.pan_mod_adder != new.pan_mod_adder
+  {
+    True ->
+      case new.pan_mod_osc >= 0 {
+        True -> [
+          "P"
+            <> int.to_string(new.pan_mod_osc)
+            <> ","
+            <> param.format_float(new.pan_mod_depth)
+            <> ","
+            <> param.format_float(new.pan_mod_adder),
+          ..diffs
+        ]
+        False -> ["P-1", ..diffs]
+      }
     False -> diffs
   }
-  let diffs = case old.amp_mod_adder != new.amp_mod_adder {
-    True -> ["am" <> param.format_float(new.amp_mod_adder), ..diffs]
+  let diffs = case
+    old.ring_osc != new.ring_osc || old.ring_amount != new.ring_amount
+  {
+    True ->
+      case new.ring_osc >= 0 {
+        True -> [
+          "XM"
+            <> int.to_string(new.ring_osc)
+            <> ","
+            <> param.format_float(new.ring_amount),
+          ..diffs
+        ]
+        False -> ["XM-1", ..diffs]
+      }
     False -> diffs
   }
-  let diffs = case old.pan_mod_osc != new.pan_mod_osc {
-    True -> ["pm" <> int.to_string(new.pan_mod_osc), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.pan_mod_depth != new.pan_mod_depth {
-    True -> ["pm" <> param.format_float(new.pan_mod_depth), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.pan_mod_adder != new.pan_mod_adder {
-    True -> ["pm" <> param.format_float(new.pan_mod_adder), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.ring_osc != new.ring_osc {
-    True -> ["XM" <> int.to_string(new.ring_osc), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.ring_amount != new.ring_amount {
-    True -> ["XM" <> param.format_float(new.ring_amount), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.sample_hold_ratio != new.sample_hold_ratio {
-    True -> ["sh" <> param.format_float(new.sample_hold_ratio), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.sample_hold_mode != new.sample_hold_mode {
-    True -> ["sh" <> int.to_string(new.sample_hold_mode), ..diffs]
+  let diffs = case
+    old.sample_hold_ratio != new.sample_hold_ratio
+    || old.sample_hold_mode != new.sample_hold_mode
+  {
+    True ->
+      case new.sample_hold_ratio >. 0.0 {
+        True -> [
+          "h"
+            <> param.format_float(new.sample_hold_ratio)
+            <> ","
+            <> int.to_string(new.sample_hold_mode),
+          ..diffs
+        ]
+        False -> ["h0", ..diffs]
+      }
     False -> diffs
   }
   let diffs = case old.quantize != new.quantize {
-    True -> ["q" <> int.to_string(new.quantize), ..diffs]
+    True -> ["bc" <> int.to_string(new.quantize), ..diffs]
     False -> diffs
   }
-  let diffs = case old.glissando_enable != new.glissando_enable {
-    True -> ["gl" <> int.to_string(new.glissando_enable), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.glissando_mode != new.glissando_mode {
-    True -> ["gl" <> int.to_string(new.glissando_mode), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.glissando_time != new.glissando_time {
-    True -> ["gl" <> param.format_float(new.glissando_time), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.smoother_enable != new.smoother_enable {
-    True -> ["sm" <> int.to_string(new.smoother_enable), ..diffs]
+  let diffs = case
+    old.glissando_mode != new.glissando_mode
+    || old.glissando_time != new.glissando_time
+  {
+    True ->
+      case new.glissando_mode > 0 {
+        True -> [
+          "g"
+            <> int.to_string(new.glissando_mode)
+            <> ","
+            <> param.format_float(new.glissando_time),
+          ..diffs
+        ]
+        False -> ["g0", ..diffs]
+      }
     False -> diffs
   }
   let diffs = case old.smoother_smoothing != new.smoother_smoothing {
-    True -> ["sm" <> param.format_float(new.smoother_smoothing), ..diffs]
+    True -> ["s" <> param.format_float(new.smoother_smoothing), ..diffs]
     False -> diffs
   }
   let diffs = case old.freq_env_depth != new.freq_env_depth {
@@ -232,19 +286,24 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
     False -> diffs
   }
   let diffs = case old.link_trig != new.link_trig {
-    True -> ["td" <> param.format_float(new.link_trig), ..diffs]
+    True -> ["L" <> param.format_float(new.link_trig), ..diffs]
     False -> diffs
   }
   let diffs = case old.freq_bend != new.freq_bend {
-    True -> ["b" <> param.format_float(new.freq_bend), ..diffs]
+    True -> ["fb" <> param.format_float(new.freq_bend), ..diffs]
     False -> diffs
   }
-  let diffs = case old.freq_bend_range != new.freq_bend_range {
-    True -> ["bp" <> param.format_float(new.freq_bend_range), ..diffs]
-    False -> diffs
-  }
-  let diffs = case old.freq_bend_offset != new.freq_bend_offset {
-    True -> ["bp" <> param.format_float(new.freq_bend_offset), ..diffs]
+  let diffs = case
+    old.freq_bend_range != new.freq_bend_range
+    || old.freq_bend_offset != new.freq_bend_offset
+  {
+    True -> [
+      "fbp"
+        <> param.format_float(new.freq_bend_range)
+        <> ","
+        <> param.format_float(new.freq_bend_offset),
+      ..diffs
+    ]
     False -> diffs
   }
   let diffs = case old.amp_bend != new.amp_bend {

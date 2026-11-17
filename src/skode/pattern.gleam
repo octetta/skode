@@ -27,9 +27,9 @@ pub type Pattern {
     length: Int,
     // number of active steps (1 .. 256)
     mute: Bool,
-    // zmu: pattern mute
+    // ym: pattern mute (0 = unmuted, 1 = muted)
     control_events: Bool,
-    // ce: emit control events
+    // yc: emit control events (0 = disabled, 1 = enabled)
     state: PatternState,
     // z: playback state
     steps: Dict(Int, String),
@@ -69,8 +69,12 @@ pub fn to_skode(pattern: Pattern) -> String {
     "y" <> p,
     "%" <> int.to_string(pattern.speed),
     case pattern.mute {
-      True -> "zmu1"
-      False -> "zmu0"
+      True -> "ym 1"
+      False -> "ym 0"
+    },
+    case pattern.control_events {
+      True -> "yc 1"
+      False -> "yc 0"
     },
     case pattern.state {
       PatternRunning -> "z1"
@@ -104,8 +108,18 @@ pub fn diff_skode(old: Pattern, new: Pattern) -> List(String) {
   let diffs = case old.mute != new.mute {
     True -> [
       case new.mute {
-        True -> "zmu1"
-        False -> "zmu0"
+        True -> "ym 1"
+        False -> "ym 0"
+      },
+      ..diffs
+    ]
+    False -> diffs
+  }
+  let diffs = case old.control_events != new.control_events {
+    True -> [
+      case new.control_events {
+        True -> "yc 1"
+        False -> "yc 0"
       },
       ..diffs
     ]
@@ -129,7 +143,7 @@ pub fn diff_skode(old: Pattern, new: Pattern) -> List(String) {
   }
 
   // Find added or updated steps
-  let step_diffs =
+  let step_updates =
     dict.to_list(new.steps)
     |> list.filter_map(fn(pair) {
       let #(idx, code) = pair
@@ -138,6 +152,26 @@ pub fn diff_skode(old: Pattern, new: Pattern) -> List(String) {
         _ -> Ok("[" <> code <> "] x" <> int.to_string(idx))
       }
     })
+
+  // Find deleted steps
+  let step_deletions =
+    dict.to_list(old.steps)
+    |> list.filter_map(fn(pair) {
+      let #(idx, _) = pair
+      case dict.has_key(new.steps, idx) {
+        True -> Error(Nil)
+        False -> Ok("[] x" <> int.to_string(idx))
+      }
+    })
+
+  let all_step_changes =
+    list.append(step_updates, step_deletions)
+    |> list.sort(fn(a, b) { string.compare(a, b) })
+
+  let step_diffs = case all_step_changes {
+    [] -> []
+    changes -> list.map(changes, fn(c) { "y" <> p <> " " <> c })
+  }
 
   list.flatten([param_diffs, step_diffs])
 }

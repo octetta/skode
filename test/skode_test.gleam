@@ -43,7 +43,7 @@ pub fn main() {
   let results = [
     // package and aligned engine versions
     check("skode package version", skode.version, "1.0.0"),
-    check("aligned pulp version", skode.pulp_version, "0.85.0"),
+    check("aligned pulp version", skode.pulp_version, "0.85.1"),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
     check("udp default port", udp.default_port, 7000),
@@ -335,6 +335,78 @@ pub fn main() {
       {
         let p = pattern.default(0) |> pattern.set_step(0, "v0 n60 l1")
         string.contains(pattern.to_skode(p), "[v0 n60 l1] x0")
+      },
+      True,
+    ),
+    check(
+      "pattern mute and control events to_skode",
+      {
+        let p =
+          pattern.Pattern(
+            ..pattern.default(1),
+            mute: True,
+            control_events: True,
+          )
+        let s = pattern.to_skode(p)
+        string.contains(s, "ym 1") && string.contains(s, "yc 1")
+      },
+      True,
+    ),
+    check(
+      "pattern diff step deletions and targeting",
+      {
+        let p0 =
+          pattern.default(3)
+          |> pattern.set_step(0, "v0 n60")
+          |> pattern.set_step(1, "v0 n62")
+        let p1 =
+          pattern.default(3)
+          |> pattern.set_step(0, "v0 n60")
+        let diffs = pattern.diff_skode(p0, p1)
+        list.contains(diffs, "y3 [] x1")
+      },
+      True,
+    ),
+    check(
+      "float formatting expands scientific notation",
+      param.format_float(0.00001),
+      "0.00001",
+    ),
+    check("float formatting clean integers", param.format_float(440.0), "440"),
+    check(
+      "voice to_engine and from_engine equivalence",
+      {
+        let v = voice.default(2)
+        let eg = voice.to_engine(v)
+        let back = voice.from_engine(eg)
+        back.id == v.id && back.oscillator.wave == v.oscillator.wave
+      },
+      True,
+    ),
+    check(
+      "voice direction serialization uses b opcode",
+      {
+        let v = voice.default(0)
+        let v_rev =
+          voice.Voice(
+            ..v,
+            oscillator: voice.Oscillator(
+              ..v.oscillator,
+              direction: param.Backward,
+            ),
+          )
+        let diffs = voice.diff_skode(v, v_rev)
+        list.any(diffs, fn(s) { string.contains(s, "b1") })
+      },
+      True,
+    ),
+    check(
+      "voice mute serialization uses m opcode",
+      {
+        let v = voice.default(0)
+        let v_muted = voice.Voice(..v, mix: voice.Mix(..v.mix, mute: True))
+        let diffs = voice.diff_skode(v, v_muted)
+        list.any(diffs, fn(s) { string.contains(s, "m1") })
       },
       True,
     ),

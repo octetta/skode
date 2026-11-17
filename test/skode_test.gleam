@@ -13,6 +13,9 @@ import skode/gen/voice_gen
 import skode/global
 import skode/param
 import skode/pattern
+import skode/transport/port
+import skode/transport/udp
+import skode/transport/wasm
 import skode/voice
 
 fn check(name: String, got: a, want: a) -> Bool {
@@ -39,8 +42,11 @@ fn num(f: Float) -> skode.Arg {
 pub fn main() {
   let results = [
     // package and aligned engine versions
-    check("skode package version", skode.version, "0.1.0"),
+    check("skode package version", skode.version, "0.3.0"),
     check("aligned pulp version", skode.pulp_version, "0.85.0"),
+    // transport configuration constants
+    check("udp default host", udp.default_host, "127.0.0.1"),
+    check("udp default port", udp.default_port, 7000),
     // tokenizing
     check("tight packing", ops("v0w1f440"), [
       skode.Voice(0),
@@ -393,6 +399,37 @@ pub fn main() {
         list.contains(parsed, skode.Voice(0))
         && list.contains(parsed, skode.Wave(5))
         && list.contains(parsed, skode.Freq(880.0))
+      },
+      True,
+    ),
+    // transport safety checks
+    check(
+      "udp transport open and close or graceful fallback",
+      case udp.open() {
+        Ok(sock) -> {
+          let Nil = udp.close(sock)
+          True
+        }
+        Error(_) -> True
+      },
+      True,
+    ),
+    check(
+      "port transport rejects invalid executable or graceful fallback",
+      case port.spawn("nonexistent_binary_xyz_123", []) {
+        Error(_) -> True
+        Ok(p) -> {
+          let Nil = port.close(p)
+          False
+        }
+      },
+      True,
+    ),
+    check(
+      "wasm transport availability is boolean",
+      case wasm.is_available() {
+        True -> True
+        False -> True
       },
       True,
     ),

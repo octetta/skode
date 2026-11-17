@@ -21,14 +21,14 @@ gleam add skode
 Or in `gleam.toml`:
 ```toml
 [dependencies]
-skode = ">= 0.1.0 and < 1.0.0"
+skode = ">= 0.3.0 and < 1.0.0"
 ```
 
 ### Elixir (`mix.exs`)
 ```elixir
 def deps do
   [
-    {:skode, "~> 0.1.0"}
+    {:skode, "~> 0.3.0"}
   ]
 end
 ```
@@ -36,7 +36,7 @@ end
 ### Erlang (`rebar.config`)
 ```erlang
 {deps, [
-    {skode, "0.1.0"}
+    {skode, "0.3.0"}
 ]}.
 ```
 
@@ -44,7 +44,7 @@ end
 Add to your project's `rebar.config`:
 ```erlang
 {deps, [
-    {skode, "0.1.0"}
+    {skode, "0.3.0"}
 ]}.
 ```
 
@@ -88,7 +88,7 @@ iodata = :skode.program_to_string(chunks)
 # => "v0 w301 n60 l1\n[bass] wt 100"
 
 # Check versions
-"0.1.0"  = :skode.version()
+"0.3.0"  = :skode.version()
 "0.85.0" = :skode.pulp_version()
 ```
 
@@ -203,6 +203,71 @@ make serve
 ```
 
 This compiles the Lustre JavaScript application, bundles the WASM synthesis engine, and starts a local web server at `http://localhost:8000`.
+
+---
+
+## Engine Transports
+
+`skode` provides zero-friction transports for interacting directly with Pulp's `mini-skred` engine across different runtime environments:
+
+### 1. UDP Transport (BEAM: Gleam / Elixir / Erlang)
+Streams commands to `mini-skred` over UDP (port `7000` by default, enabled via `SKRED_UDP=ON` in Pulp). Zero native dependencies, complete crash isolation, and distributed across local or network machines.
+
+```gleam
+import skode
+import skode/transport/udp
+
+pub fn main() {
+  // Open ephemeral client socket
+  let assert Ok(sock) = udp.open()
+
+  // Stream raw commands
+  let assert Ok(Nil) = udp.send(sock, "v0 w1 f440 a-6 T")
+
+  // Or send structured AST programs
+  let program = skode.parse_program("v0 f880 T; [lead] puts")
+  let assert Ok(Nil) = udp.send_program_default(sock, program)
+
+  udp.close(sock)
+}
+```
+
+In Elixir:
+```elixir
+{:ok, sock} = :skode@transport@udp.open()
+:ok = :skode@transport@udp.send(sock, "v0 f440 a-6 T")
+:skode@transport@udp.close(sock)
+```
+
+### 2. Erlang Port Subprocess Transport (BEAM)
+Launches and supervises `mini-skred` directly as an external OS process over stdin/stdout lines, allowing standard OTP supervisors to monitor its lifecycle and restart on failure:
+
+```gleam
+import skode/transport/port
+
+pub fn main() {
+  let assert Ok(p) = port.spawn_default()
+  let assert Ok(Nil) = port.send_text(p, "v0 n60 l1")
+  port.close(p)
+}
+```
+
+### 3. WebAssembly Transport (JavaScript / Browser / Lustre)
+Directly calls the native C DSP engine compiled to WebAssembly (`skred_api.js` + `skred_api.wasm`) in browser and Web Audio environments:
+
+```gleam
+import skode/transport/wasm
+
+pub fn play() {
+  case wasm.is_available() {
+    True -> {
+      let assert Ok(Nil) = wasm.start_default()
+      let assert Ok(Nil) = wasm.send_text("v0 n60 T")
+    }
+    False -> Nil
+  }
+}
+```
 
 ---
 

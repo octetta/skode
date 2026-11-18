@@ -1,4 +1,4 @@
-.PHONY: default help all build test test-beam test-js format format-check check editor editor-build editor-serve serve editor-clean clean sync-from-pulp
+.PHONY: default help all build test test-beam test-js format format-check check editor editor-build editor-serve serve editor-clean clean sync-from-sk3 sync-from-pulp
 
 GLEAM ?= gleam
 
@@ -17,7 +17,8 @@ help:
 	@echo "  make format-check - Verify Gleam code formatting"
 	@echo "  make check        - Run Gleam compiler type check"
 	@echo "  make editor-build - Build Lustre editor web application"
-	@echo "  make sync-from-pulp - Synchronize schema bindings & WASM engine from ../pulp"
+	@echo "  make sync-from-sk3 - Synchronize schema bindings & WASM engine from ../sk3"
+	@echo "  make sync-from-pulp - Backward-compatible alias for sync-from-sk3"
 	@echo "  make clean        - Clean build artifacts"
 
 all: build editor-build
@@ -55,8 +56,10 @@ editor-build:
 editor-serve: editor-build
 	cd app/editor && ./serve.sh 8000
 
-sync-from-pulp:
-	$(MAKE) -C ../pulp sync-skode
+sync-from-sk3:
+	$(MAKE) -C ../sk3 sync-skode
+
+sync-from-pulp: sync-from-sk3
 
 clean:
 	$(GLEAM) clean

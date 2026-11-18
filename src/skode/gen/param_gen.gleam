@@ -51,6 +51,46 @@ pub fn clamp_pitch_mode(val: Int) -> Int {
   int.clamp(val, min_pitch_mode, max_pitch_mode)
 }
 
+pub const min_noise_type = 0
+
+pub const max_noise_type = 7
+
+pub fn clamp_noise_type(val: Int) -> Int {
+  int.clamp(val, min_noise_type, max_noise_type)
+}
+
+pub const min_noise_bits = 2
+
+pub const max_noise_bits = 31
+
+pub fn clamp_noise_bits(val: Int) -> Int {
+  int.clamp(val, min_noise_bits, max_noise_bits)
+}
+
+pub const min_noise_tap = 1
+
+pub const max_noise_tap = 30
+
+pub fn clamp_noise_tap(val: Int) -> Int {
+  int.clamp(val, min_noise_tap, max_noise_tap)
+}
+
+pub const min_noise_dac = 0
+
+pub const max_noise_dac = 1
+
+pub fn clamp_noise_dac(val: Int) -> Int {
+  int.clamp(val, min_noise_dac, max_noise_dac)
+}
+
+pub const min_noise_sample = -1.0
+
+pub const max_noise_sample = 1.0
+
+pub fn clamp_noise_sample(val: Float) -> Float {
+  float.clamp(val, min_noise_sample, max_noise_sample)
+}
+
 pub const min_one_shot = 0
 
 pub const max_one_shot = 1

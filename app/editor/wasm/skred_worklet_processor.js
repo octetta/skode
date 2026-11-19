@@ -5,12 +5,16 @@
 
 import createModule from "./skred_worklet_engine.js";
 
+const MAX_EVENTS_BATCH = 64;
+const EVENT_SIZE = 72;
+
 class SkredWorkletProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super(options);
     this.module = null;
     this.leftPtr = 0;
     this.rightPtr = 0;
+    this.eventsBuffer = 0;
     this.ready = false;
     this.commandQueue = [];
     this.sampleRate = (options && options.processorOptions && options.processorOptions.sampleRate) || 48000;
@@ -40,7 +44,13 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
       this.leftPtr = this.module._malloc(128 * 4);
       this.rightPtr = this.module._malloc(128 * 4);
       this.cmdBufferPtr = this.module._malloc(this.cmdBufferSize);
+      if (typeof this.module._skred_control_event_poll === "function") {
+        this.eventsBuffer = this.module._malloc(MAX_EVENTS_BATCH * EVENT_SIZE);
+      }
       this.ready = (startRes === 0);
+      if (typeof this.module._skred_logger === "function") {
+        try { this.module._skred_logger(1); } catch (e) {}
+      }
 
       this.port.postMessage({
         type: "ready",
@@ -50,8 +60,12 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
 
       // Drain any commands queued before initialization completed
       while (this.commandQueue.length > 0) {
-        const cmd = this.commandQueue.shift();
-        this.executeCommand(cmd);
+        const item = this.commandQueue.shift();
+        if (typeof item === "string") {
+          this.executeCommand(item);
+        } else if (item && item.type === "script") {
+          this.writeScript(item.script, item.cmd);
+        }
       }
     } catch (err) {
       console.error("[SkredWorklet] Initialization error:", err);
@@ -77,8 +91,29 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
       } else {
         this.commandQueue.push(data.text);
       }
+    } else if (data.type === "script") {
+      if (this.ready) {
+        this.writeScript(data.script, data.cmd);
+      } else {
+        this.commandQueue.push(data);
+      }
     } else if (data.type === "init" && !this.ready) {
       this.init(data.wasmBinary);
+    }
+  }
+
+  writeScript(script, followUpCmd) {
+    if (!this.module) return;
+    try {
+      if (this.module.FS) {
+        try { this.module.FS.writeFile("/song.sk", script); } catch (e) {}
+        try { this.module.FS.writeFile("song.sk", script); } catch (e) {}
+      }
+      if (followUpCmd) {
+        this.executeCommand(followUpCmd);
+      }
+    } catch (err) {
+      console.error("[SkredWorklet] Error writing script to VFS:", err);
     }
   }
 
@@ -87,6 +122,15 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
     try {
       this.module.stringToUTF8(cmd, this.cmdBufferPtr, this.cmdBufferSize);
       this.module._skred_command(this.cmdBufferPtr);
+      if (typeof this.module._skred_log === "function" && typeof this.module.UTF8ToString === "function") {
+        const logPtr = this.module._skred_log();
+        if (logPtr) {
+          const text = this.module.UTF8ToString(logPtr);
+          if (text && text.trim().length > 0) {
+            this.port.postMessage({ type: "log", text: text.trim() });
+          }
+        }
+      }
     } catch (err) {
       console.error("[SkredWorklet] Command error:", err);
     }
@@ -99,8 +143,12 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
 
     // Drain queued commands
     while (this.commandQueue.length > 0) {
-      const cmd = this.commandQueue.shift();
-      this.executeCommand(cmd);
+      const item = this.commandQueue.shift();
+      if (typeof item === "string") {
+        this.executeCommand(item);
+      } else if (item && item.type === "script") {
+        this.writeScript(item.script, item.cmd);
+      }
     }
 
     const output = outputs[0];
@@ -132,6 +180,35 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
           outRight[offset + i] = heap[rightIdx + i];
         }
         offset += chunk;
+      }
+    }
+
+    // Poll control / step events and dispatch to main thread
+    if (this.eventsBuffer && typeof this.module._skred_control_event_poll === "function") {
+      const count = this.module._skred_control_event_poll(this.eventsBuffer, MAX_EVENTS_BATCH);
+      if (count > 0) {
+        const events = [];
+        const view = new DataView(this.module.HEAPU8.buffer, this.eventsBuffer, count * EVENT_SIZE);
+        for (let i = 0; i < count; i++) {
+          const base = i * EVENT_SIZE;
+          const t = view.getUint32(base + 0, true);
+          const opcode = view.getUint32(base + 4, true);
+          const sample = Number(view.getBigUint64(base + 8, true));
+          const seq = Number(view.getBigUint64(base + 16, true));
+          const v = view.getInt32(base + 24, true);
+          const p = view.getInt32(base + 28, true);
+          const s = view.getInt32(base + 32, true);
+          const tag = view.getInt32(base + 36, true);
+          const id = view.getInt32(base + 40, true);
+          const value_count = view.getUint32(base + 44, true);
+          const vals = [
+            view.getFloat64(base + 48, true),
+            view.getFloat64(base + 56, true),
+            view.getFloat64(base + 64, true),
+          ];
+          events.push({ t, opcode, sample, seq, v, p, s, tag, id, value_count, vals });
+        }
+        this.port.postMessage({ type: "events", events });
       }
     }
 

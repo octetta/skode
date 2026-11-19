@@ -43,7 +43,7 @@ pub fn main() {
   let results = [
     // package and aligned engine versions
     check("skode package version", skode.version, "1.0.0"),
-    check("aligned pulp version", skode.pulp_version, "1.3.1"),
+    check("aligned pulp version", skode.pulp_version, "1.3.2"),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
     check("udp default port", udp.default_port, 7000),
@@ -264,6 +264,14 @@ pub fn main() {
     check("master volume op", ops("V-6"), [MasterVolume(-6.0)]),
     check("master volume 0 dB", ops("V 0"), [MasterVolume(0.0)]),
     roundtrip("master volume roundtrip", "V-6"),
+    // bandlimit (WB)
+    check("bandlimit active op", ops("WB"), [skode.bandlimit_active()]),
+    check("bandlimit slot op", ops("WB 100"), [skode.bandlimit_slot(100)]),
+    check("wave_bandlimit alias", ops("wave_bandlimit"), [
+      skode.bandlimit_active(),
+    ]),
+    roundtrip("bandlimit active roundtrip", "WB"),
+    roundtrip("bandlimit slot roundtrip", "WB 100"),
     // param module
     check("clamp freq low", param.clamp_frequency(5.0), 20.0),
     check("clamp freq high", param.clamp_frequency(25_000.0), 20_000.0),

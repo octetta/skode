@@ -102,6 +102,8 @@ pub type Op {
   Puts(String)
   LoadWave(path: String, id: Int)
   NameWave(name: String, id: Int)
+  /// `WB` (active voice) or `WB <slot>` (named slot mipmap generation)
+  Bandlimit(slot: Option(Int))
   /// `+4 rest-of-chunk`; consecutive defers in one chunk accumulate in the engine
   Defer(mode: DeferMode, amount: Arg, body: List(Op))
   MacroDef(name: String, body: String)
@@ -704,6 +706,11 @@ fn typed(cmd: Command, fs: List(Float)) -> Op {
     "puts", [], Some(s), None -> Puts(s)
     "/ws", [a], Some(s), None -> with_int(cmd, a, fn(i) { LoadWave(s, i) })
     "wt", [a], Some(s), None -> with_int(cmd, a, fn(i) { NameWave(s, i) })
+    "WB", [], None, None -> Bandlimit(None)
+    "WB", [a], None, None -> with_int(cmd, a, fn(i) { Bandlimit(Some(i)) })
+    "wave_bandlimit", [], None, None -> Bandlimit(None)
+    "wave_bandlimit", [a], None, None ->
+      with_int(cmd, a, fn(i) { Bandlimit(Some(i)) })
     _, _, _, _ -> Generic(cmd)
   }
 }
@@ -811,6 +818,8 @@ fn op_text(op: Op, first: Bool) -> String {
     Puts(t) -> with_str(first, t, "puts")
     LoadWave(p, n) -> with_str(first, p, "/ws " <> i(n))
     NameWave(name, n) -> with_str(first, name, "wt " <> i(n))
+    Bandlimit(None) -> "WB"
+    Bandlimit(Some(n)) -> "WB " <> i(n)
     Defer(mode, amount, body) ->
       case mode {
         Beats -> "+"
@@ -859,4 +868,14 @@ pub fn generic_atoms(ops: List(Op)) -> List(String) {
       _ -> []
     }
   })
+}
+
+/// Create an active voice wavetable bandlimit operation (`WB`).
+pub fn bandlimit_active() -> Op {
+  Bandlimit(None)
+}
+
+/// Create a specific wavetable slot bandlimit operation (`WB <slot>`).
+pub fn bandlimit_slot(slot: Int) -> Op {
+  Bandlimit(Some(slot))
 }

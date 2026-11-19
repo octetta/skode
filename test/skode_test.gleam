@@ -43,7 +43,7 @@ pub fn main() {
   let results = [
     // package and aligned engine versions
     check("skode package version", skode.version, "1.0.0"),
-    check("aligned pulp version", skode.pulp_version, "1.3.3"),
+    check("aligned pulp version", skode.pulp_version, "1.3.4"),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
     check("udp default port", udp.default_port, 7000),
@@ -520,6 +520,12 @@ pub fn main() {
         Error(_) -> True
       },
       True,
+    ),
+    check("filter drive parse", ops("jd 1.5"), [skode.FilterDrive(1.5)]),
+    check(
+      "filter drive roundtrip",
+      skode.ops_to_string([skode.filter_drive(2.0)]),
+      "jd 2",
     ),
   ]
   let failed = list.filter(results, fn(r) { !r }) |> list.length

@@ -104,6 +104,8 @@ pub type Op {
   NameWave(name: String, id: Int)
   /// `WB` (active voice) or `WB <slot>` (named slot mipmap generation)
   Bandlimit(slot: Option(Int))
+  /// `jd <drive>` multimode filter drive / saturation amount
+  FilterDrive(drive: Float)
   /// `+4 rest-of-chunk`; consecutive defers in one chunk accumulate in the engine
   Defer(mode: DeferMode, amount: Arg, body: List(Op))
   MacroDef(name: String, body: String)
@@ -711,6 +713,8 @@ fn typed(cmd: Command, fs: List(Float)) -> Op {
     "wave_bandlimit", [], None, None -> Bandlimit(None)
     "wave_bandlimit", [a], None, None ->
       with_int(cmd, a, fn(i) { Bandlimit(Some(i)) })
+    "jd", [a], None, None -> FilterDrive(a)
+    "filter_drive", [a], None, None -> FilterDrive(a)
     _, _, _, _ -> Generic(cmd)
   }
 }
@@ -820,6 +824,7 @@ fn op_text(op: Op, first: Bool) -> String {
     NameWave(name, n) -> with_str(first, name, "wt " <> i(n))
     Bandlimit(None) -> "WB"
     Bandlimit(Some(n)) -> "WB " <> i(n)
+    FilterDrive(d) -> "jd " <> fmt(d)
     Defer(mode, amount, body) ->
       case mode {
         Beats -> "+"
@@ -878,4 +883,8 @@ pub fn bandlimit_active() -> Op {
 /// Create a specific wavetable slot bandlimit operation (`WB <slot>`).
 pub fn bandlimit_slot(slot: Int) -> Op {
   Bandlimit(Some(slot))
+}
+
+pub fn filter_drive(drive: Float) -> Op {
+  FilterDrive(drive)
 }

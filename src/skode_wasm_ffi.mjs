@@ -62,8 +62,6 @@ export function wasm_exec(cmd) {
     } else if (isRunning) {
       engineStarted = true;
     }
-      engineStarted = true;
-    }
     if (typeof g.Module._skred_logger === "function") {
       g.Module._skred_logger(1);
     }

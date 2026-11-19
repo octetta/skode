@@ -91,6 +91,14 @@ pub fn clamp_noise_sample(val: Float) -> Float {
   float.clamp(val, min_noise_sample, max_noise_sample)
 }
 
+pub const min_mip_level = -1
+
+pub const max_mip_level = 7
+
+pub fn clamp_mip_level(val: Int) -> Int {
+  int.clamp(val, min_mip_level, max_mip_level)
+}
+
 pub const min_one_shot = 0
 
 pub const max_one_shot = 1

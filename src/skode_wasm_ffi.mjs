@@ -27,8 +27,14 @@ export function wasm_start(frames, voices) {
     return new Error("Pulp WebAssembly Module not found on global scope");
   }
   try {
-    if (typeof g.Module._skred_start === "function" && !engineStarted) {
+    const isRunning =
+      engineStarted ||
+      (typeof g.Module._skred_audio_running === "function" &&
+        Boolean(g.Module._skred_audio_running()));
+    if (!isRunning && typeof g.Module._skred_start === "function") {
       g.Module._skred_start(frames, voices, 0);
+      engineStarted = true;
+    } else if (isRunning) {
       engineStarted = true;
     }
     if (typeof g.Module._skred_logger === "function") {
@@ -46,8 +52,16 @@ export function wasm_exec(cmd) {
     return new Error("Pulp WebAssembly Module not available");
   }
   try {
-    if (!engineStarted && typeof g.Module._skred_start === "function") {
+    const isRunning =
+      engineStarted ||
+      (typeof g.Module._skred_audio_running === "function" &&
+        Boolean(g.Module._skred_audio_running()));
+    if (!isRunning && typeof g.Module._skred_start === "function") {
       g.Module._skred_start(128, 16, 0);
+      engineStarted = true;
+    } else if (isRunning) {
+      engineStarted = true;
+    }
       engineStarted = true;
     }
     if (typeof g.Module._skred_logger === "function") {

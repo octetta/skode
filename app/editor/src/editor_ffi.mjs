@@ -509,7 +509,7 @@ export function render_waveform_buffer(canvasId, waveIdx) {
   function draw() {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-      if (attempts++ < 15) {
+      if (attempts++ < 20) {
         requestAnimationFrame(draw);
       }
       return;
@@ -521,94 +521,64 @@ export function render_waveform_buffer(canvasId, waveIdx) {
     const height = canvas.height || 90;
 
     const N = 256;
-    const samples = new Float32Array(N);
+    let samples = null;
 
-    // Exact waveform math matching Pulp parts/synth-wave.c & synth-types.h:
-    // 0 = Sine, 1 = Square, 2 = Saw-Down, 3 = Saw-Up, 4 = Triangle, 5 = Noise, 6 = Noise Alt
-    for (let i = 0; i < N; i++) {
-      const t = i / N;
-      switch (waveIdx) {
-        case 0: // WAVE_TABLE_SINE: f = sinf(2.0f * M_PI * phase)
-          samples[i] = Math.sin(2 * Math.PI * t);
-          break;
-        case 1: // WAVE_TABLE_SQR: (phase < 0.5) ? 1.0f : -1.0f
-          samples[i] = t < 0.5 ? 0.95 : -0.95;
-          break;
-        case 2: // WAVE_TABLE_SAW_DOWN: 2.0f * phase - 1.0f
-          samples[i] = 2.0 * t - 1.0;
-          break;
-        case 3: // WAVE_TABLE_SAW_UP: 1.0f - 2.0f * phase
-          samples[i] = 1.0 - 2.0 * t;
-          break;
-        case 4: // WAVE_TABLE_TRI: (phase < 0.5f) ? (4.0f * phase - 1.0f) : (3.0f - 4.0f * phase)
-          samples[i] = t < 0.5 ? (4.0 * t - 1.0) : (3.0 - 4.0 * t);
-          break;
-        case 5: // WAVE_TABLE_NOISE
-        case 6: // WAVE_TABLE_NOISE_ALT
-          samples[i] = (Math.random() * 2.0 - 1.0) * 0.75;
-          break;
-        case 7:
-        case 8:
-        case 9:
-        case 10:
-        case 11:
-        case 12:
-        case 13:
-        case 14:
-          // Live Audio line-in flatline
-          samples[i] = 0.0;
-          break;
-        case 15: // DWG Strings: sum of 32 harmonics (1/h)
-          {
-            let sum = 0;
-            for (let h = 1; h <= 32; h++) {
-              sum += (1.0 / h) * Math.sin(2 * Math.PI * h * t);
-            }
-            samples[i] = sum * 0.6;
+    // First try querying true engine wavetable from WASM module if available
+    const win = typeof window !== "undefined" ? window : globalThis;
+    ensureWasmStarted();
+
+    if (win.Module && typeof win.Module._skred_wave_data === "function" && typeof win.Module._skred_wave_size === "function") {
+      try {
+        const ptr = win.Module._skred_wave_data(waveIdx);
+        const size = win.Module._skred_wave_size(waveIdx);
+        if (ptr && size > 0 && win.Module.HEAPF32) {
+          const floatOffset = ptr >> 2;
+          const rawData = win.Module.HEAPF32.subarray(floatOffset, floatOffset + size);
+          samples = new Float32Array(N);
+          for (let i = 0; i < N; i++) {
+            const idx = Math.floor((i * size) / N);
+            samples[i] = rawData[idx];
           }
-          break;
-        case 16: // DWG Clarinet: odd harmonics (1/h)
-          {
-            let sum = 0;
-            for (let h = 1; h <= 31; h += 2) {
-              sum += (1.0 / h) * Math.sin(2 * Math.PI * h * t);
-            }
-            samples[i] = sum * 0.75;
-          }
-          break;
-        case 17: // DWG Acoustic Piano: measured DW-8000 ROM harmonic weights
-          {
-            const A = [0.800, 1.000, 0.158, 0.282, 0.179, 0.158, 0.126, 0.354, 0.100, 0.447, 0.089, 0.282, 0.089, 0.282, 0.200, 0.158, 0.141, 0.126, 0.050, 0.016, 0.014, 0.057, 0.070, 0.057, 0.018, 0.016, 0.016, 0.015, 0.014, 0.013, 0.014, 0.016];
-            let sum = 0;
-            for (let h = 1; h <= A.length; h++) {
-              sum += A[h - 1] * Math.sin(2 * Math.PI * h * t);
-            }
-            samples[i] = sum * 0.4;
-          }
-          break;
-        case 82: // 808 Kick: downward exponential frequency sweep
-          {
-            const sweep = 50 + 91 * Math.exp(-6.0 * t);
-            samples[i] = Math.sin(2 * Math.PI * sweep * t * 0.08) * Math.exp(-2.5 * t);
-          }
-          break;
-        case 83: // 808 Snare: snappy body + transient noise
-          {
-            const body = Math.sin(2 * Math.PI * 180 * t * 0.05) * Math.exp(-4.0 * t);
-            const noise = (Math.random() * 2 - 1) * Math.exp(-3.0 * t);
-            samples[i] = (body * 0.5 + noise * 0.5);
-          }
-          break;
-        default:
-          {
-            // Rich harmonic acoustic table
-            const w = (waveIdx % 32) + 1;
-            const h1 = Math.sin(2 * Math.PI * t);
-            const h2 = 0.5 * Math.sin(2 * Math.PI * t * (w % 5 + 2));
-            const h3 = 0.25 * Math.sin(2 * Math.PI * t * (w % 7 + 3));
-            samples[i] = (h1 + h2 + h3) / 1.75;
-          }
-          break;
+        }
+      } catch (e) {
+        console.warn("[skode] Error reading engine wavetable data:", e);
+      }
+    }
+
+    // If engine is not yet booted but Module is loading, retry after a short delay
+    if (!samples && attempts++ < 20 && (!win.Module || !win.Module._skred_wave_data)) {
+      setTimeout(draw, 100);
+    }
+
+    // Fallback to basic synthetic waveforms only if WASM is not yet ready or slot has no data
+    if (!samples) {
+      samples = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        const t = i / N;
+        switch (waveIdx) {
+          case 0: // WAVE_TABLE_SINE: f = sinf(2.0f * M_PI * phase)
+            samples[i] = Math.sin(2 * Math.PI * t);
+            break;
+          case 1: // WAVE_TABLE_SQR: (phase < 0.5) ? 1.0f : -1.0f
+            samples[i] = t < 0.5 ? 0.95 : -0.95;
+            break;
+          case 2: // WAVE_TABLE_SAW_DOWN: 2.0f * phase - 1.0f
+            samples[i] = 2.0 * t - 1.0;
+            break;
+          case 3: // WAVE_TABLE_SAW_UP: 1.0f - 2.0f * phase
+            samples[i] = 1.0 - 2.0 * t;
+            break;
+          case 4: // WAVE_TABLE_TRI: (phase < 0.5f) ? (4.0f * phase - 1.0f) : (3.0f - 4.0f * phase)
+            samples[i] = t < 0.5 ? (4.0 * t - 1.0) : (3.0 - 4.0 * t);
+            break;
+          case 5: // WAVE_TABLE_NOISE
+          case 6: // WAVE_TABLE_NOISE_ALT
+            samples[i] = (Math.random() * 2.0 - 1.0) * 0.75;
+            break;
+          default:
+            samples[i] = 0.0;
+            break;
+        }
       }
     }
 
@@ -628,14 +598,15 @@ export function render_waveform_buffer(canvasId, waveIdx) {
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    // Waveform trace (DW8000 cyan glow)
+    // Waveform trace (cyan glow)
     ctx.strokeStyle = "#00e5ff";
     ctx.lineWidth = 2;
     ctx.beginPath();
     const step = width / samples.length;
     for (let i = 0; i < samples.length; i++) {
       const x = i * step;
-      const y = ((1.0 - samples[i]) * 0.5) * (height - 12) + 6;
+      const s = Math.max(-1.2, Math.min(1.2, samples[i]));
+      const y = ((1.0 - s) * 0.5) * (height - 12) + 6;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }

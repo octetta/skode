@@ -34,13 +34,16 @@ const voiceParams = {
 function ensureAudioContext() {
   const win = typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : null);
   if (!win) return null;
+  if (typeof navigator !== "undefined" && "audioSession" in navigator) {
+    try { navigator.audioSession.type = "playback"; } catch (e) {}
+  }
   if (!audioCtx) {
     const AudioContextClass = win.AudioContext || win.webkitAudioContext;
     if (AudioContextClass) {
       audioCtx = new AudioContextClass();
     }
   }
-  if (audioCtx && audioCtx.state === "suspended") {
+  if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted")) {
     audioCtx.resume();
   }
   return audioCtx;

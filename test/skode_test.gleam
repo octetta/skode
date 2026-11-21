@@ -43,7 +43,7 @@ pub fn main() {
   let results = [
     // package and aligned engine versions
     check("skode package version", skode.version, "1.0.4"),
-    check("aligned pulp version", skode.pulp_version, "1.4.9"),
+    check("aligned pulp version", skode.pulp_version, "1.4.10"),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
     check("udp default port", udp.default_port, 7000),

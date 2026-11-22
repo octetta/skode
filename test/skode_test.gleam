@@ -42,8 +42,8 @@ fn num(f: Float) -> skode.Arg {
 pub fn main() {
   let results = [
     // package and aligned engine versions
-    check("skode package version", skode.version, "1.0.4"),
-    check("aligned pulp version", skode.pulp_version, "1.4.10"),
+    check("skode package version", skode.version, "1.0.5"),
+    check("aligned pulp version", skode.pulp_version, "1.4.11"),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
     check("udp default port", udp.default_port, 7000),
@@ -70,6 +70,9 @@ pub fn main() {
     ]),
     check("M both forms", ops("M125,96") == ops("M 125 96"), True),
     check("bare g clears glide", ops("g"), [skode.Glide(0.0, None)]),
+    check("voice cue bare reset", ops("VC"), [skode.VoiceCue(None)]),
+    check("voice cue index", ops("1 VC"), [skode.VoiceCue(Some(1))]),
+    check("voice cue label", ops("[world] VC"), [skode.VoiceCueLabel("world")]),
     check("one step behind: 8 args max", ops("DL 1 2 3 4 5 6 7 8 9"), [
       Generic(Command(
         "DL",

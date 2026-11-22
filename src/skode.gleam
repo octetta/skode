@@ -30,7 +30,7 @@ import skode/param
 // ---- Versions ----
 
 /// Version of the Skode AST & parsing package.
-pub const version = "1.0.4"
+pub const version = "1.0.5"
 
 /// Upstream Pulp / Skred audio engine release version this AST aligns with.
 pub const pulp_version = version_gen.pulp_version
@@ -84,6 +84,10 @@ pub type Op {
   Slew(time: Float, curve: Option(Int))
   Detune(wave: Int, cents: Float)
   SampleWindow(Option(#(Int, Int)))
+  /// `VC` (voice wave range reset) or `VC <idx>` (set voice range to cue index)
+  VoiceCue(Option(Int))
+  /// `[label] VC` (set voice range to named cue)
+  VoiceCueLabel(String)
   WaveLoop(wave: Int, start: Int, end: Int)
   Pattern(Int)
   MasterPattern(Int)
@@ -688,6 +692,9 @@ fn typed(cmd: Command, fs: List(Float)) -> Op {
     "VS", [], None, None -> SampleWindow(None)
     "VS", [a, b], None, None ->
       with_int2(cmd, a, b, fn(x, y) { SampleWindow(Some(#(x, y))) })
+    "VC", [], None, None -> VoiceCue(None)
+    "VC", [a], None, None -> with_int(cmd, a, fn(i) { VoiceCue(Some(i)) })
+    "VC", [], Some(s), None -> VoiceCueLabel(s)
     "WL", [a, b, c], None, None ->
       with_int2(cmd, a, b, fn(x, y) {
         with_int(cmd, c, fn(z) { WaveLoop(x, y, z) })
@@ -806,6 +813,9 @@ fn op_text(op: Op, first: Bool) -> String {
     Detune(w, c) -> "N" <> i(w) <> "," <> fmt(c)
     SampleWindow(None) -> "VS"
     SampleWindow(Some(#(a, b))) -> "VS" <> i(a) <> "," <> i(b)
+    VoiceCue(None) -> "VC"
+    VoiceCue(Some(n)) -> "VC " <> i(n)
+    VoiceCueLabel(label) -> with_str(first, label, "VC")
     WaveLoop(w, a, b) -> "WL " <> i(w) <> "," <> i(a) <> "," <> i(b)
     Pattern(n) -> "y" <> i(n)
     MasterPattern(n) -> "yp" <> i(n)

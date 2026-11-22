@@ -1,6 +1,6 @@
 # Skode Voice Editor
 
-A reactive web interface built with **Lustre 5** and **Gleam** for real-time visualization and parameter control of the **Pulp 0.85.0** audio engine.
+A reactive web interface built with **Lustre 5** and **Gleam** for real-time visualization and parameter control of the **Skred 1.4.13** audio engine.
 
 ## Overview
 

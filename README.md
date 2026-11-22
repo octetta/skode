@@ -2,7 +2,7 @@
 
 [![Hex Package](https://img.shields.io/hexpm/v/skode.svg)](https://hex.pm/packages/skode)
 [![HexDocs](https://img.shields.io/badge/hex-docs-purple.svg)](https://hexdocs.pm/skode/)
-[![Engine Alignment](https://img.shields.io/badge/skred-v1.0.0-ff69b4.svg)](https://github.com/octetta/sk3)
+[![Engine Alignment](https://img.shields.io/badge/skred-v1.4.13-ff69b4.svg)](https://github.com/octetta/sk3)
 [![BEAM](https://img.shields.io/badge/BEAM-Erlang%20%7C%20Elixir%20%7C%20Gleam%20%7C%20LFE%20%7C%20erlua-a30535.svg)](https://erlang.org)
 [![Run in Livebook](https://livebook.dev/badge/v1/pink.svg)](https://livebook.dev/run?url=https://github.com/octetta/skode/blob/main/notebooks/skode_wasm.livemd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

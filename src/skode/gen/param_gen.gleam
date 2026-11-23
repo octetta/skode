@@ -11,6 +11,14 @@ pub fn clamp_wave_table_index(val: Int) -> Int {
   int.clamp(val, min_wave_table_index, max_wave_table_index)
 }
 
+pub const min_source_type = 0
+
+pub const max_source_type = 5
+
+pub fn clamp_source_type(val: Int) -> Int {
+  int.clamp(val, min_source_type, max_source_type)
+}
+
 pub const min_freq = 20.0
 
 pub const max_freq = 20_000.0

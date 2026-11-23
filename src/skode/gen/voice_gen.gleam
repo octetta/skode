@@ -10,6 +10,7 @@ pub type Voice {
   Voice(
     id: Int,
     wave_table_index: Int,
+    source_type: Int,
     freq: Float,
     midi_note: Float,
     midi_cents: Float,
@@ -91,6 +92,7 @@ pub fn default(id: Int) -> Voice {
   Voice(
     id: id,
     wave_table_index: 0,
+    source_type: 1,
     freq: 440.0,
     midi_note: 60.0,
     midi_cents: 0.0,

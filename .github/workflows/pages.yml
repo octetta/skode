@@ -47,6 +47,7 @@ jobs:
         run: |
           mkdir -p dist
           cp app/editor/index.html dist/
+          cp app/editor/coi-serviceworker.js dist/ 2>/dev/null || true
           cp -r app/editor/wasm dist/
           mkdir -p dist/build/dev
           cp -r app/editor/build/dev/javascript dist/build/dev/

@@ -238,19 +238,107 @@ function playWebAudioNote() {
 // -----------------------------------------------------------------------------
 
 let wasmEngineStarted = false;
+let workletNode = null;
+let workletAudioContext = null;
+let workletReady = false;
+let workletInitAttempted = false;
+let workletFailed = false;
+let workletInitPromise = null;
+
+function unlockAudio() {
+  if (workletAudioContext && (workletAudioContext.state === "suspended" || workletAudioContext.state === "interrupted")) {
+    workletAudioContext.resume().catch(() => {});
+  }
+  if (!workletInitAttempted) {
+    initAudioWorklet();
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pointerdown", unlockAudio, { passive: true });
+  window.addEventListener("click", unlockAudio, { passive: true });
+  window.addEventListener("keydown", unlockAudio, { passive: true });
+  window.addEventListener("touchstart", unlockAudio, { passive: true });
+}
+
+export async function initAudioWorklet() {
+  if (workletInitPromise) return workletInitPromise;
+  workletInitAttempted = true;
+
+  workletInitPromise = (async () => {
+    if (typeof window === "undefined" || (!window.AudioContext && !window.webkitAudioContext) || !window.AudioWorkletNode) {
+      console.warn("[skode-editor] AudioWorklet not supported; falling back to main thread.");
+      return false;
+    }
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      workletAudioContext = new AudioCtx({ latencyHint: "interactive" });
+
+      const base = window.location.href.replace(/\/[^\/]*$/, "/");
+      const processorUrl = new URL("wasm/skred_worklet_processor.js", base).href;
+      const wasmUrl = new URL("wasm/skred_worklet_engine.wasm", base).href;
+
+      await workletAudioContext.audioWorklet.addModule(processorUrl);
+
+      const resp = await fetch(wasmUrl);
+      if (!resp.ok) throw new Error("HTTP " + resp.status + " fetching worklet wasm");
+      const wasmBinary = await resp.arrayBuffer();
+
+      workletNode = new AudioWorkletNode(workletAudioContext, "skred-worklet-processor", {
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        processorOptions: {
+          wasmBinary: wasmBinary.slice ? wasmBinary.slice(0) : wasmBinary,
+          sampleRate: workletAudioContext.sampleRate,
+        },
+      });
+
+      workletNode.port.postMessage({
+        type: "init",
+        wasmBinary: wasmBinary.slice ? wasmBinary.slice(0) : wasmBinary,
+        sampleRate: workletAudioContext.sampleRate,
+      });
+
+      workletNode.port.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+        if (data.type === "ready") {
+          console.log("[skode-editor] AudioWorklet Skred engine ready (v" + data.version + ", " + data.sampleRate + "Hz)");
+          workletReady = true;
+          workletNode.port.postMessage({ type: "cmd", text: "V0; log 1;" });
+        }
+      };
+
+      workletNode.connect(workletAudioContext.destination);
+      return true;
+    } catch (err) {
+      console.warn("[skode-editor] AudioWorklet init failed:", err);
+      workletFailed = true;
+      return false;
+    }
+  })();
+
+  return workletInitPromise;
+}
 
 function ensureWasmStarted() {
   const win = typeof window !== "undefined" ? window : globalThis;
-  if (win.Module && typeof win.Module._skred_start === "function" && !wasmEngineStarted) {
+  if (win.Module && !wasmEngineStarted) {
     try {
-      const res = win.Module._skred_start(128, 16, 0);
-      wasmEngineStarted = true;
+      if (typeof win.Module._skred_start_headless === "function") {
+        const res = win.Module._skred_start_headless(128, 44100);
+        wasmEngineStarted = (res === 0);
+      } else if (typeof win.Module._skred_start === "function") {
+        const res = win.Module._skred_start(128, 16, 0);
+        wasmEngineStarted = (res === 0);
+      }
       if (typeof win.Module._skred_logger === "function") {
         win.Module._skred_logger(1);
       }
-      console.log("[Pulp WASM] Native C DSP engine started successfully, status:", res);
+      console.log("[skode-editor] Native C DSP engine inited on main thread, status:", wasmEngineStarted);
     } catch (e) {
-      console.warn("[Pulp WASM] Error booting native C engine:", e);
+      console.warn("[skode-editor] Error booting main thread C engine:", e);
     }
   }
 }
@@ -287,11 +375,26 @@ export function send_skode_command(cmd) {
     targetVoice = parseInt(vMatch[1], 10);
   }
 
-  // Case-sensitive: only capital 'T' (e.g. 'T', 'v0T', '0T') triggers a note.
-  // Lowercase 't' is the amplitude envelope opcode; 'l0'/'l1' are loop controls. Neither is a note trigger.
-  const isTrigger = /(?:^|\s)(?:v?\d+)?T(?:\s|$)/.test(cmd);
+  // Trigger check for note audition
+  const isTrigger = /(?:^|\s)(?:v?\d+)?(?:T|l1)(?:\s|$)/.test(cmd);
 
-  // 1. Native Pulp C Engine via Emscripten WebAssembly
+  unlockAudio();
+
+  // Route to real-time AudioWorklet DSP if available
+  if (workletNode && workletNode.port) {
+    workletNode.port.postMessage({ type: "cmd", text: cmd });
+  }
+
+  // Auto-release audition note (l1 / T) after 450ms so voice envelope naturally decays/releases
+  if (isTrigger && !cmd.includes("l0")) {
+    const trigMatch = cmd.match(/(?:^|\s)v?(\d+)?\s*(?:l1|T)(?:\s|$)/);
+    const v = (trigMatch && trigMatch[1] !== undefined) ? trigMatch[1] : targetVoice;
+    setTimeout(() => {
+      send_skode_command("v" + v + " l0");
+    }, 450);
+  }
+
+  // 1. Native Pulp C Engine via Emscripten WebAssembly (for logs, queries, and wavetable extraction)
   if (win.Module && typeof win.Module.ccall === "function") {
     ensureWasmStarted();
     try {
@@ -303,7 +406,7 @@ export function send_skode_command(cmd) {
       try {
         output = win.Module.ccall("skred_log", "string", [], []) || "";
       } catch (_) {}
-      console.log("[Pulp WASM DSP dispatch voice " + targetVoice + "]:", cmd, "output:", output);
+      console.log("[Pulp DSP dispatch voice " + targetVoice + "]:", cmd, "output:", output);
       return output.trim();
     } catch (e) {
       console.warn("Error calling WASM skred_command:", e);
@@ -317,8 +420,8 @@ export function send_skode_command(cmd) {
     return res !== undefined && res !== null ? String(res) : "";
   }
 
-  // 3. Fallback: Pure Web Audio preview if WASM is not present
-  if (isTrigger) {
+  // 3. Fallback: Pure Web Audio preview if Worklet / WASM is not yet active
+  if (isTrigger && !workletReady) {
     playWebAudioNote();
   }
 

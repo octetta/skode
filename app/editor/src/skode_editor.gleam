@@ -2621,9 +2621,7 @@ pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     }
 
     TriggerVoiceId(vid) -> {
-      let envs = get_voice_envelopes(model, vid)
-      let cmd =
-        "v" <> int.to_string(vid) <> " t " <> format_adsr(envs.amp_env) <> " T"
+      let cmd = "v" <> int.to_string(vid) <> " l1"
       #(model, dispatch_skode_effect(cmd))
     }
 

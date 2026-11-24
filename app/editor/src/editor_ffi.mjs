@@ -259,6 +259,58 @@ if (typeof window !== "undefined") {
   window.addEventListener("click", unlockAudio, { passive: true });
   window.addEventListener("keydown", unlockAudio, { passive: true });
   window.addEventListener("touchstart", unlockAudio, { passive: true });
+
+  // Early worklet initialization on page load
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => { initAudioWorklet(); });
+  } else {
+    setTimeout(initAudioWorklet, 0);
+  }
+
+  // Intercept Tab key on Skode command input for 2.1.0 auto-completion
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const input = document.getElementById("cmdInput") ||
+      (e.target && e.target.matches && e.target.matches("input[placeholder*='Live Skode input']") ? e.target : null);
+    if (!input || document.activeElement !== input) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const cursor = input.selectionStart;
+    const text = input.value;
+    const textBefore = text.slice(0, cursor);
+    const textAfter = text.slice(cursor);
+
+    const match = textBefore.match(/([^\s]+)$/);
+    if (!match) return;
+
+    const prefix = match[1];
+    const tokenStart = match.index;
+
+    const matches = typeof window.skodeComplete === "function" ? window.skodeComplete(prefix) : [];
+    if (!matches || matches.length === 0) return;
+
+    if (matches.length === 1) {
+      const completed = matches[0] + " ";
+      input.value = textBefore.slice(0, tokenStart) + completed + textAfter;
+      const newCursor = tokenStart + completed.length;
+      input.setSelectionRange(newCursor, newCursor);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+
+    const common = typeof window.skodeCommonPrefix === "function" ? window.skodeCommonPrefix(matches) : prefix;
+    if (common.length > prefix.length) {
+      input.value = textBefore.slice(0, tokenStart) + common + textAfter;
+      const newCursor = tokenStart + common.length;
+      input.setSelectionRange(newCursor, newCursor);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    } else {
+      console.log("[Skode Tab Completion]", matches);
+      window.dispatchEvent(new CustomEvent("skode-tab-completion", { detail: matches }));
+    }
+  }, { capture: true });
 }
 
 export async function initAudioWorklet() {
@@ -275,8 +327,8 @@ export async function initAudioWorklet() {
       workletAudioContext = new AudioCtx({ latencyHint: "interactive" });
 
       const base = window.location.href.replace(/\/[^\/]*$/, "/");
-      const processorUrl = new URL("wasm/skred_worklet_processor.js", base).href;
-      const wasmUrl = new URL("wasm/skred_worklet_engine.wasm", base).href;
+      const processorUrl = new URL("wasm/skred_worklet_processor.js?v=2.1.0", base).href;
+      const wasmUrl = new URL("wasm/skred_worklet_engine.wasm?v=2.1.0", base).href;
 
       await workletAudioContext.audioWorklet.addModule(processorUrl);
 
@@ -294,6 +346,12 @@ export async function initAudioWorklet() {
         },
       });
 
+      if (typeof window !== "undefined") {
+        window.workletNode = workletNode;
+        window.__skred_worklet_node = workletNode;
+        window.workletAudioContext = workletAudioContext;
+      }
+
       workletNode.port.postMessage({
         type: "init",
         wasmBinary: wasmBinary.slice ? wasmBinary.slice(0) : wasmBinary,
@@ -306,6 +364,9 @@ export async function initAudioWorklet() {
         if (data.type === "ready") {
           console.log("[skode-editor] AudioWorklet Skred engine ready (v" + data.version + ", " + data.sampleRate + "Hz)");
           workletReady = true;
+          if (typeof window !== "undefined") {
+            window.workletReady = true;
+          }
           workletNode.port.postMessage({ type: "cmd", text: "V0; log 1;" });
         }
       };

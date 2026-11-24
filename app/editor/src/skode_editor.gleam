@@ -13,7 +13,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre
-import lustre/attribute.{max, min, placeholder, step, styles, type_, value}
+import lustre/attribute.{id, max, min, placeholder, step, styles, type_, value}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element, text}
 import lustre/element/html.{
@@ -32,7 +32,6 @@ import skode/param
 import skode/pattern.{
   type Pattern, Pattern, PatternPaused, PatternRunning, PatternStopped,
 }
-import skode/transport/wasm
 
 // -----------------------------------------------------------------------------
 // FFI Declarations & Transport Integration
@@ -41,13 +40,9 @@ import skode/transport/wasm
 @external(javascript, "./editor_ffi.mjs", "copy_to_clipboard")
 fn copy_to_clipboard(text: String) -> Nil
 
-/// Dispatch a Skode command to the native audio engine via the official WASM transport.
-fn send_skode_command(cmd: String) -> String {
-  case wasm.exec(cmd) {
-    Ok(output) -> output
-    Error(err) -> "Error: " <> err
-  }
-}
+/// Dispatch a Skode command to the native audio engine via the real-time AudioWorklet WASM transport.
+@external(javascript, "./editor_ffi.mjs", "send_skode_command")
+fn send_skode_command(cmd: String) -> String
 
 @external(javascript, "./editor_ffi.mjs", "render_waveform_buffer")
 fn render_waveform_buffer(_canvas_id: String, _wave_idx: Int) -> Nil {
@@ -10637,6 +10632,7 @@ fn render_skode_command_entry(model: Model, skode_cmd: String) -> Element(Msg) {
         ],
         [
           input([
+            id("cmdInput"),
             type_("text"),
             placeholder(
               "Live Skode input: e.g. v0 w 2 f 880 a -3 HS 1 (Press Enter)",

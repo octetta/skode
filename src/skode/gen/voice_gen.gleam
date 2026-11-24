@@ -18,6 +18,7 @@ pub type Voice {
     pitch_mode: Int,
     phase: Float,
     phase_inc: Float,
+    pulse_width: Float,
     noise_type: Int,
     noise_bits: Int,
     noise_tap: Int,
@@ -75,6 +76,10 @@ pub type Voice {
     smoother_smoothing: Float,
     use_freq_envelope: Int,
     freq_env_depth: Float,
+    pwm_mod_osc: Int,
+    pwm_mod_depth: Float,
+    use_pwm_envelope: Int,
+    pwm_env_depth: Float,
     sync_blep: Float,
     link_sync: List(Float),
     link_midi: List(Float),
@@ -100,6 +105,7 @@ pub fn default(id: Int) -> Voice {
     pitch_mode: 1,
     phase: 0.0,
     phase_inc: 0.0,
+    pulse_width: 0.5,
     noise_type: 0,
     noise_bits: 23,
     noise_tap: 17,
@@ -157,6 +163,10 @@ pub fn default(id: Int) -> Voice {
     smoother_smoothing: 0.0,
     use_freq_envelope: 0,
     freq_env_depth: 0.0,
+    pwm_mod_osc: -1,
+    pwm_mod_depth: 0.0,
+    use_pwm_envelope: 0,
+    pwm_env_depth: 0.0,
     sync_blep: 0.0,
     link_sync: [],
     link_midi: [],
@@ -181,6 +191,10 @@ pub fn to_skode(voice: Voice) -> String {
   ]
   let cmds = case voice.midi_note != d.midi_note {
     True -> list.append(cmds, ["n" <> param.format_float(voice.midi_note)])
+    False -> cmds
+  }
+  let cmds = case voice.pulse_width != d.pulse_width {
+    True -> list.append(cmds, ["pw" <> param.format_float(voice.pulse_width)])
     False -> cmds
   }
   let cmds = case voice.direction != d.direction {
@@ -345,6 +359,21 @@ pub fn to_skode(voice: Voice) -> String {
       list.append(cmds, ["pd" <> param.format_float(voice.freq_env_depth)])
     False -> cmds
   }
+  let cmds = case voice.pwm_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "PW"
+        <> int.to_string(voice.pwm_mod_osc)
+        <> ","
+        <> param.format_float(voice.pwm_mod_depth),
+      ])
+    False -> cmds
+  }
+  let cmds = case voice.pwm_env_depth != d.pwm_env_depth {
+    True ->
+      list.append(cmds, ["pwd" <> param.format_float(voice.pwm_env_depth)])
+    False -> cmds
+  }
   let cmds = case voice.link_sync != d.link_sync {
     True ->
       case voice.link_sync {
@@ -432,6 +461,7 @@ pub fn to_skode_verbose(voice: Voice) -> String {
     "a" <> param.format_float(voice.user_amp),
   ]
   let cmds = list.append(cmds, ["n" <> param.format_float(voice.midi_note)])
+  let cmds = list.append(cmds, ["pw" <> param.format_float(voice.pulse_width)])
   let cmds = list.append(cmds, ["b" <> int.to_string(voice.direction)])
   let cmds = list.append(cmds, ["B" <> int.to_string(voice.loop_enabled)])
   let cmds = list.append(cmds, ["BC" <> int.to_string(voice.loop_count)])
@@ -531,6 +561,18 @@ pub fn to_skode_verbose(voice: Voice) -> String {
     list.append(cmds, ["s" <> param.format_float(voice.smoother_smoothing)])
   let cmds =
     list.append(cmds, ["pd" <> param.format_float(voice.freq_env_depth)])
+  let cmds = case voice.pwm_mod_osc >= 0 {
+    True ->
+      list.append(cmds, [
+        "PW"
+        <> int.to_string(voice.pwm_mod_osc)
+        <> ","
+        <> param.format_float(voice.pwm_mod_depth),
+      ])
+    False -> list.append(cmds, ["PW-1"])
+  }
+  let cmds =
+    list.append(cmds, ["pwd" <> param.format_float(voice.pwm_env_depth)])
   let cmds = case voice.link_sync {
     [] -> list.append(cmds, ["HS-1"])
     targets ->
@@ -618,6 +660,10 @@ pub fn get_links(voice: Voice) -> List(VoiceLink) {
   }
   let links = case voice.ring_osc >= 0 && voice.ring_osc != voice.id {
     True -> [VoiceLink(voice.id, voice.ring_osc, LinkRingMod), ..links]
+    False -> links
+  }
+  let links = case voice.pwm_mod_osc >= 0 && voice.pwm_mod_osc != voice.id {
+    True -> [VoiceLink(voice.id, voice.pwm_mod_osc, LinkHardSync), ..links]
     False -> links
   }
   let links =

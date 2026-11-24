@@ -59,6 +59,14 @@ pub fn clamp_pitch_mode(val: Int) -> Int {
   int.clamp(val, min_pitch_mode, max_pitch_mode)
 }
 
+pub const min_pulse_width = 0.01
+
+pub const max_pulse_width = 0.99
+
+pub fn clamp_pulse_width(val: Float) -> Float {
+  float.clamp(val, min_pulse_width, max_pulse_width)
+}
+
 pub const min_noise_type = 0
 
 pub const max_noise_type = 7
@@ -449,6 +457,38 @@ pub const max_freq_env_depth = 48.0
 
 pub fn clamp_freq_env_depth(val: Float) -> Float {
   float.clamp(val, min_freq_env_depth, max_freq_env_depth)
+}
+
+pub const min_pwm_mod_osc = -1
+
+pub const max_pwm_mod_osc = 255
+
+pub fn clamp_pwm_mod_osc(val: Int) -> Int {
+  int.clamp(val, min_pwm_mod_osc, max_pwm_mod_osc)
+}
+
+pub const min_pwm_mod_depth = -1.0
+
+pub const max_pwm_mod_depth = 1.0
+
+pub fn clamp_pwm_mod_depth(val: Float) -> Float {
+  float.clamp(val, min_pwm_mod_depth, max_pwm_mod_depth)
+}
+
+pub const min_use_pwm_envelope = 0
+
+pub const max_use_pwm_envelope = 1
+
+pub fn clamp_use_pwm_envelope(val: Int) -> Int {
+  int.clamp(val, min_use_pwm_envelope, max_use_pwm_envelope)
+}
+
+pub const min_pwm_env_depth = -1.0
+
+pub const max_pwm_env_depth = 1.0
+
+pub fn clamp_pwm_env_depth(val: Float) -> Float {
+  float.clamp(val, min_pwm_env_depth, max_pwm_env_depth)
 }
 
 pub const min_link_trig = -1.0

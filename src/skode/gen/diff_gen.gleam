@@ -22,6 +22,10 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
     True -> ["n" <> param.format_float(new.midi_note), ..diffs]
     False -> diffs
   }
+  let diffs = case old.pulse_width != new.pulse_width {
+    True -> ["pw" <> param.format_float(new.pulse_width), ..diffs]
+    False -> diffs
+  }
   let diffs = case old.direction != new.direction {
     True -> ["b" <> int.to_string(new.direction), ..diffs]
     False -> diffs
@@ -238,6 +242,26 @@ pub fn diff_voice_skode(old: Voice, new: Voice) -> List(String) {
   }
   let diffs = case old.freq_env_depth != new.freq_env_depth {
     True -> ["pd" <> param.format_float(new.freq_env_depth), ..diffs]
+    False -> diffs
+  }
+  let diffs = case
+    old.pwm_mod_osc != new.pwm_mod_osc || old.pwm_mod_depth != new.pwm_mod_depth
+  {
+    True ->
+      case new.pwm_mod_osc >= 0 {
+        True -> [
+          "PW"
+            <> int.to_string(new.pwm_mod_osc)
+            <> ","
+            <> param.format_float(new.pwm_mod_depth),
+          ..diffs
+        ]
+        False -> ["PW-1", ..diffs]
+      }
+    False -> diffs
+  }
+  let diffs = case old.pwm_env_depth != new.pwm_env_depth {
+    True -> ["pwd" <> param.format_float(new.pwm_env_depth), ..diffs]
     False -> diffs
   }
   let diffs = case old.link_sync != new.link_sync {

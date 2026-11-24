@@ -8,6 +8,7 @@ import skode.{
 import skode/delay
 import skode/gen/delay_gen
 import skode/gen/diff_gen
+import skode/gen/opcodes_gen
 import skode/gen/param_gen
 import skode/gen/voice_gen
 import skode/global
@@ -42,8 +43,26 @@ fn num(f: Float) -> skode.Arg {
 pub fn main() {
   let results = [
     // package and aligned engine versions
-    check("skode package version", skode.version, "2.0.0"),
-    check("aligned pulp version", skode.pulp_version, "2.0.0"),
+    check("skode package version", skode.version, "2.1.0"),
+    check("aligned pulp version", skode.pulp_version, "2.1.0"),
+    check(
+      "2.1.0 opcodes dictionary loaded",
+      opcodes_gen.total_commands >= 600,
+      True,
+    ),
+    check("2.1.0 tab completion for pw", opcodes_gen.complete("pw"), [
+      "pw", "pwd", "pwm_env", "pwm_env_depth", "pwm_mod", "pwt",
+    ]),
+    check("2.1.0 tab completion for w>p", opcodes_gen.complete("w>p"), ["w>p"]),
+    check("2.1.0 tab completion for vox?", opcodes_gen.complete("vox?"), [
+      "vox?",
+    ]),
+    check("2.1.0 tab completion for /vox?", opcodes_gen.complete("/vox?"), [
+      "/vox?",
+    ]),
+    check("2.1.0 tab completion for -re", opcodes_gen.complete("-re"), [
+      "-restart",
+    ]),
     // transport configuration constants
     check("udp default host", udp.default_host, "127.0.0.1"),
     check("udp default port", udp.default_port, 7000),

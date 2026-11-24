@@ -74,8 +74,9 @@
       color: var(--code-color) !important;
     }
   </style>
-  <!-- Load real Skred 1.4.13 C Engine compiled to WebAssembly via Emscripten -->
-  <script src="./wasm/skred_api.js"></script>
+  <!-- Load real Skred 2.1.0 C Engine & Skode 2.1.0 Command Autocompletion -->
+  <script src="./skode_commands.js?v=2.1.0"></script>
+  <script src="./wasm/skred_api.js?v=2.1.0"></script>
 </head>
 <body>
   <div id="app"></div>

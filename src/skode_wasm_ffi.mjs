@@ -48,7 +48,30 @@ export function wasm_start(frames, voices) {
 
 export function wasm_exec(cmd) {
   const g = getGlobal();
-  if (!g || !g.Module || typeof g.Module.ccall !== "function") {
+  if (!g) {
+    return new Error("Global execution scope not available");
+  }
+
+  // Route to active AudioWorklet if running
+  const worklet = g.workletNode || g.__skred_worklet_node;
+  if (worklet && worklet.port) {
+    if (typeof cmd === "string" && cmd.includes("\n")) {
+      const lines = cmd.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed) {
+          worklet.port.postMessage({ type: "cmd", text: trimmed });
+        }
+      }
+    } else {
+      worklet.port.postMessage({ type: "cmd", text: cmd });
+    }
+  }
+
+  if (!g.Module || typeof g.Module.ccall !== "function") {
+    if (worklet && worklet.port) {
+      return new Ok("");
+    }
     return new Error("Pulp WebAssembly Module not available");
   }
   try {

@@ -1,5 +1,5 @@
 name = "skode"
-version = "2.1.3"
+version = "2.1.4"
 description = "Typed AST, parser, and canonical printer for the Skode music sequencer and Skred audio engine"
 licences = ["MIT"]
 repository = { type = "github", user = "octetta", repo = "skode" }

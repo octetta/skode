@@ -213,6 +213,16 @@ class SkredWorkletProcessor extends AudioWorkletProcessor {
       }
     } else if (data.type === "unlink" || data.type === "remove_file") {
       this.removeFile(data.path);
+    } else if (data.type === "midi" && data.bytes && this.module) {
+      const len = data.bytes.length;
+      if (typeof this.module._skred_midi_send_raw === "function") {
+        const ptr = this.module._malloc(len);
+        if (ptr) {
+          this.module.HEAPU8.set(data.bytes, ptr);
+          this.module._skred_midi_send_raw(ptr, len);
+          this.module._free(ptr);
+        }
+      }
     } else if (data.type === "features") {
       const ptr = (this.module && typeof this.module._skred_features === "function") ? this.module._skred_features() : 0;
       const text = ptr ? this.module.UTF8ToString(ptr) : "";

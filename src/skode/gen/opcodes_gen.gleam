@@ -7,7 +7,7 @@ pub type CommandInfo {
   CommandInfo(cmd: String, alt: String, group: String, summary: String)
 }
 
-pub const total_commands = 706
+pub const total_commands = 718
 
 pub const all_commands: List(String) = [
   "%",
@@ -438,9 +438,12 @@ pub const all_commands: List(String) = [
   "pattern_all",
   "pattern_all_data",
   "pattern_all_query",
+  "pattern_copy",
   "pattern_events",
   "pattern_goto",
   "pattern_goto_alt",
+  "pattern_hz",
+  "pattern_length",
   "pattern_loop",
   "pattern_master",
   "pattern_modulo",
@@ -448,6 +451,7 @@ pub const all_commands: List(String) = [
   "pattern_mute",
   "pattern_queue",
   "pattern_ratchet",
+  "pattern_rate",
   "pattern_reset",
   "pattern_rewind",
   "pattern_select",
@@ -557,6 +561,12 @@ pub const all_commands: List(String) = [
   "sample_gen_slash",
   "sample_hold",
   "sample_render",
+  "scene_active",
+  "scene_chain",
+  "scene_copy",
+  "scene_cue",
+  "scene_define",
+  "scene_now",
   "scope_event",
   "scope_start",
   "scope_status",
@@ -704,6 +714,8 @@ pub const all_commands: List(String) = [
   "xg",
   "y",
   "yc",
+  "ycp",
+  "yl",
   "ym",
   "yp",
   "ys",

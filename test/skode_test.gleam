@@ -43,8 +43,8 @@ fn num(f: Float) -> skode.Arg {
 pub fn main() {
   let results = [
     // package and aligned engine versions
-    check("skode package version", skode.version, "2.1.4"),
-    check("aligned pulp version", skode.pulp_version, "2.1.4"),
+    check("skode package version", skode.version, "3.0.0"),
+    check("aligned pulp version", skode.pulp_version, "3.0.0"),
     check(
       "2.1.0 opcodes dictionary loaded",
       opcodes_gen.total_commands >= 600,

@@ -77,7 +77,7 @@ pub fn to_skode(pattern: Pattern) -> String {
   let header = [
     "y" <> p,
     "%" <> int.to_string(pattern.speed),
-    int.to_string(pattern.length) <> " yl",
+    "yl " <> int.to_string(pattern.length),
     case pattern.mute {
       True -> "ym 1"
       False -> "ym 0"

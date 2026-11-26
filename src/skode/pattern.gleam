@@ -50,6 +50,15 @@ pub fn default(pattern_id: Int) -> Pattern {
   )
 }
 
+/// Set the explicit pattern length in steps (yl).
+pub fn set_length(pattern: Pattern, length: Int) -> Pattern {
+  let len = case length < 1 {
+    True -> 1
+    False -> length
+  }
+  Pattern(..pattern, length: len)
+}
+
 /// Set a specific step's Skode command body (e.g. `[v0 n60 l1] x0`).
 pub fn set_step(pattern: Pattern, step_index: Int, code: String) -> Pattern {
   let s = param.clamp_step_id(step_index)
@@ -68,6 +77,7 @@ pub fn to_skode(pattern: Pattern) -> String {
   let header = [
     "y" <> p,
     "%" <> int.to_string(pattern.speed),
+    int.to_string(pattern.length) <> " yl",
     case pattern.mute {
       True -> "ym 1"
       False -> "ym 0"
